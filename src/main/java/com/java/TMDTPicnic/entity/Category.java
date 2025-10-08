@@ -16,3 +16,4 @@ public class Category {
     @JoinColumn(name = "parent_id")
     private Category parent;
 }
+
