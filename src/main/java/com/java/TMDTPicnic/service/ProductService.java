@@ -9,6 +9,10 @@ import com.java.TMDTPicnic.entity.ProductImage;
 import com.java.TMDTPicnic.repository.CategoryRepository;
 import com.java.TMDTPicnic.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -21,6 +25,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
 
+    //Page product
     public ProductResponse createProduct(ProductRequest request) {
         if (productRepository.existsBySlug(request.getSlug())) {
             throw new RuntimeException("Slug already exists!");
@@ -56,10 +61,16 @@ public class ProductService {
         return mapToResponse(saved);
     }
 
-    public List<ProductResponse> getAllProducts() {
-        return productRepository.findAll()
-                .stream().map(this::mapToResponse)
-                .collect(Collectors.toList());
+    public Page<ProductResponse> getAllProducts(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+
+//        return productRepository.findAll()
+//                .stream().map(this::mapToResponse)
+//                .collect(Collectors.toList());
+        Page<Product> productsPage = productRepository.findAll(pageable);
+
+        return productsPage.map(this::mapToResponse);
     }
 
     public ProductResponse getProductById(Long id) {
