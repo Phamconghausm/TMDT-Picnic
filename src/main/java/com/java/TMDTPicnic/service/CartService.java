@@ -11,6 +11,7 @@ import com.java.TMDTPicnic.repository.CartItemRepository;
 import com.java.TMDTPicnic.repository.CartRepository;
 import com.java.TMDTPicnic.repository.ProductRepository;
 import com.java.TMDTPicnic.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -47,7 +48,7 @@ public class CartService {
                 .findByCartIdAndProductId(cart.getId(), product.getId())
                 .orElseGet(() -> createCartItem(cart, product));
 
-        // ✅ Cập nhật số lượng
+        // Cập nhật số lượng
         cartItem.setQuantity(cartItem.getQuantity() + request.getQuantity());
         cartItemRepository.save(cartItem);
         cart.setUpdatedAt(LocalDateTime.now());
@@ -57,6 +58,7 @@ public class CartService {
         return mapToCartResponse(cart, cartItems);
     }
 
+    @Transactional
     public void removeItem(Long userId, Long productId) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Cart not found"));
@@ -64,6 +66,7 @@ public class CartService {
         cartItemRepository.deleteByCartIdAndProductId(cart.getId(), productId);
     }
 
+    @Transactional
     public void clearCart(Long userId) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Cart not found"));
