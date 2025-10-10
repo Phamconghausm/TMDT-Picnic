@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import com.java.TMDTPicnic.dto.response.ApiResponse;
 import java.util.List;
 
 @RestController
@@ -18,27 +18,49 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping
-    public ResponseEntity<ProductResponse> createProduct(@RequestBody ProductRequest request) {
-        return ResponseEntity.ok(productService.createProduct(request));
+    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@RequestBody ProductRequest request) {
+        ProductResponse createdProduct = productService.createProduct(request);
+        return ResponseEntity.ok(
+                ApiResponse.<ProductResponse>builder()
+                        .message("Tạo sản phẩm thành công")
+                        .data(createdProduct)
+                        .build()
+        );
     }
 
     @GetMapping
     @Operation(summary = "Lấy danh sách sản phẩm (có phân trang)")
-    public ResponseEntity<Page<ProductResponse>> getAllProducts(
+    public ResponseEntity<ApiResponse<Page<ProductResponse>>> getAllProducts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        return ResponseEntity.ok(productService.getAllProducts(page, size));
+        Page<ProductResponse> products = productService.getAllProducts(page, size);
+        return ResponseEntity.ok(
+                ApiResponse.<Page<ProductResponse>>builder()
+                        .message("Lấy danh sách sản phẩm thành công")
+                        .data(products)
+                        .build()
+        );
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProductResponse> getProductById(@PathVariable Long id) {
-        return ResponseEntity.ok(productService.getProductById(id));
+    public ResponseEntity<ApiResponse<ProductResponse>> getProductById(@PathVariable Long id) {
+        ProductResponse product = productService.getProductById(id);
+        return ResponseEntity.ok(
+                ApiResponse.<ProductResponse>builder()
+                        .message("Lấy sản phẩm thành công")
+                        .data(product)
+                        .build()
+        );
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteProduct(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
-        return ResponseEntity.ok("Deleted successfully");
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .message("Xoá sản phẩm thành công")
+                        .build()
+        );
     }
 }

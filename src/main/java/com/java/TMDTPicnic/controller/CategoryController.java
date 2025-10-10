@@ -1,6 +1,7 @@
 package com.java.TMDTPicnic.controller;
 
 import com.java.TMDTPicnic.dto.request.CategoryRequest;
+import com.java.TMDTPicnic.dto.response.ApiResponse;
 import com.java.TMDTPicnic.dto.response.CategoryResponse;
 import com.java.TMDTPicnic.service.CategoryService;
 import lombok.RequiredArgsConstructor;
@@ -17,28 +18,56 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @PostMapping
-    public ResponseEntity<CategoryResponse> createCategory(@RequestBody CategoryRequest request) {
-        return ResponseEntity.ok(categoryService.createCategory(request));
+    public ResponseEntity<ApiResponse<CategoryResponse>> createCategory(@RequestBody CategoryRequest request) {
+        CategoryResponse createdCategory = categoryService.createCategory(request);
+        return ResponseEntity.ok(
+                ApiResponse.<CategoryResponse>builder()
+                        .message("Tạo danh mục thành công")
+                        .data(createdCategory)
+                        .build()
+        );
     }
 
     @GetMapping
-    public ResponseEntity<List<CategoryResponse>> getAllCategories() {
-        return ResponseEntity.ok(categoryService.getAllCategories());
+    public ResponseEntity<ApiResponse<List<CategoryResponse>>> getAllCategories() {
+        List<CategoryResponse> categories = categoryService.getAllCategories();
+        return ResponseEntity.ok(
+                ApiResponse.<List<CategoryResponse>>builder()
+                        .message("Lấy danh sách danh mục thành công")
+                        .data(categories)
+                        .build()
+        );
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CategoryResponse> getCategoryById(@PathVariable Long id) {
-        return ResponseEntity.ok(categoryService.getCategoryById(id));
+    public ResponseEntity<ApiResponse<CategoryResponse>> getCategoryById(@PathVariable Long id) {
+        CategoryResponse category = categoryService.getCategoryById(id);
+        return ResponseEntity.ok(
+                ApiResponse.<CategoryResponse>builder()
+                        .message("Lấy danh mục thành công")
+                        .data(category)
+                        .build()
+        );
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CategoryResponse> updateCategory(@PathVariable Long id, @RequestBody CategoryRequest request) {
-        return ResponseEntity.ok(categoryService.updateCategory(id, request));
+    public ResponseEntity<ApiResponse<CategoryResponse>> updateCategory(@PathVariable Long id, @RequestBody CategoryRequest request) {
+        CategoryResponse updatedCategory = categoryService.updateCategory(id, request);
+        return ResponseEntity.ok(
+                ApiResponse.<CategoryResponse>builder()
+                        .message("Cập nhật danh mục thành công")
+                        .data(updatedCategory)
+                        .build()
+        );
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteCategory(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable Long id) {
         categoryService.deleteCategory(id);
-        return ResponseEntity.ok("Deleted successfully");
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .message("Xoá danh mục thành công")
+                        .build()
+        );
     }
 }

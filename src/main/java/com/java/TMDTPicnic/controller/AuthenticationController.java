@@ -52,7 +52,8 @@ public class AuthenticationController {
 
         response.setHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
-        return ResponseEntity.ok(ApiResponse.<AuthenticationResponse>builder()
+        return ResponseEntity.ok(ApiResponse
+                .<AuthenticationResponse>builder()
                 .data(authenticationResponse)
                 .message("Đăng nhập thành công")
                 .build());
