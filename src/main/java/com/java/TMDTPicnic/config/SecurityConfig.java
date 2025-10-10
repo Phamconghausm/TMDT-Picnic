@@ -29,40 +29,26 @@ public class SecurityConfig {
     @Value("${jwt.signerKey}")
     private String SIGNER_KEY;
 
-    private static final String[] PUBLIC_ENDPOINTS = {
-            "/auth/**", // gom luôn login, logout, register,...
-            "/v3/api-docs/**",
-            "/swagger-ui/**",
-            "/swagger-ui.html",
-            "/api/cart/**" // nếu giỏ hàng không yêu cầu đăng nhập
-    };
-
-    private static final String[] PUBLIC_GET_ENDPOINTS = {
-            "/api/products/**",
-            "/api/categories/**"
-    };
-
-    private static final String[] ADMIN_ENDPOINTS = {
-            "/api/products/**",
-            "/api/categories/**"
+    private final String[] PUBLIC_ENDPOINTS = {
+            "/auth/login",
+            "/auth/logout",
+            "/auth/register",
+            "/auth/refresh-token",
+            "/auth/forgot-password",
     };
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity, ActiveUserFilter activeUserFilter) throws Exception {
         httpSecurity
-                .authorizeHttpRequests(auth -> auth
-                        // Public cho mọi method
-                        .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-
-                        // GET không cần login
-                        .requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINTS).permitAll()
-
-                        // Admin được phép POST/PUT/DELETE
-                        .requestMatchers(HttpMethod.POST, ADMIN_ENDPOINTS).hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, ADMIN_ENDPOINTS).hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, ADMIN_ENDPOINTS).hasRole("ADMIN")
-
-                        // Các request còn lại -> cần login
+                .authorizeHttpRequests(request -> request
+                        .requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/products/**", "/api/categories/**").hasRole("ADMIN")
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt
