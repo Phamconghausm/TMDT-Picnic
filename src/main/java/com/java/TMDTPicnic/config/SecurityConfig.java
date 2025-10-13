@@ -34,7 +34,7 @@ public class SecurityConfig {
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
-            "/api/cart/**" // nếu giỏ hàng không yêu cầu đăng nhập
+//            "/api/cart/**" // TẤT CẢ method (GET/POST/PUT/DELETE) với /api/cart/** đều PUBLIC
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {

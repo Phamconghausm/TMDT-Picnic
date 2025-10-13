@@ -5,7 +5,10 @@ import com.java.TMDTPicnic.dto.response.ApiResponse;
 import com.java.TMDTPicnic.dto.response.CategoryResponse;
 import com.java.TMDTPicnic.service.CategoryService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,8 +20,19 @@ public class CategoryController {
 
     private final CategoryService categoryService;
 
+    // === CREATE CATEGORY (ADMIN only) ===
     @PostMapping
-    public ResponseEntity<ApiResponse<CategoryResponse>> createCategory(@RequestBody CategoryRequest request) {
+    public ResponseEntity<ApiResponse<CategoryResponse>> createCategory(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody CategoryRequest request) {
+
+        if (!jwt.getClaimAsString("role").equals("ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.<CategoryResponse>builder()
+                            .message("Không có quyền thực hiện")
+                            .build());
+        }
+
         CategoryResponse createdCategory = categoryService.createCategory(request);
         return ResponseEntity.ok(
                 ApiResponse.<CategoryResponse>builder()
@@ -28,6 +42,7 @@ public class CategoryController {
         );
     }
 
+    // === GET ALL CATEGORIES (public) ===
     @GetMapping
     public ResponseEntity<ApiResponse<List<CategoryResponse>>> getAllCategories() {
         List<CategoryResponse> categories = categoryService.getAllCategories();
@@ -39,6 +54,7 @@ public class CategoryController {
         );
     }
 
+    // === GET CATEGORY BY ID (public) ===
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<CategoryResponse>> getCategoryById(@PathVariable Long id) {
         CategoryResponse category = categoryService.getCategoryById(id);
@@ -50,8 +66,20 @@ public class CategoryController {
         );
     }
 
+    // === UPDATE CATEGORY (ADMIN only) ===
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<CategoryResponse>> updateCategory(@PathVariable Long id, @RequestBody CategoryRequest request) {
+    public ResponseEntity<ApiResponse<CategoryResponse>> updateCategory(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long id,
+            @RequestBody CategoryRequest request) {
+
+        if (!jwt.getClaimAsString("role").equals("ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.<CategoryResponse>builder()
+                            .message("Không có quyền thực hiện")
+                            .build());
+        }
+
         CategoryResponse updatedCategory = categoryService.updateCategory(id, request);
         return ResponseEntity.ok(
                 ApiResponse.<CategoryResponse>builder()
@@ -61,8 +89,19 @@ public class CategoryController {
         );
     }
 
+    // === DELETE CATEGORY (ADMIN only) ===
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteCategory(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long id) {
+
+        if (!jwt.getClaimAsString("role").equals("ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.<Void>builder()
+                            .message("Không có quyền thực hiện")
+                            .build());
+        }
+
         categoryService.deleteCategory(id);
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()

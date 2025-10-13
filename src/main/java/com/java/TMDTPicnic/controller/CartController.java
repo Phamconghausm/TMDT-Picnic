@@ -5,6 +5,8 @@ import com.java.TMDTPicnic.dto.response.CartResponse;
 import com.java.TMDTPicnic.service.CartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -14,8 +16,9 @@ public class CartController {
 
     private final CartService cartService;
 
-    @GetMapping("/{userId}")
-    public ResponseEntity<ApiResponse<CartResponse>> getCart(@PathVariable Long userId) {
+    @GetMapping
+    public ResponseEntity<ApiResponse<CartResponse>> getCart(@AuthenticationPrincipal Jwt jwt) {
+        Long userId = Long.valueOf(jwt.getClaimAsString("sub"));
         CartResponse cart = cartService.getCartByUser(userId);
         return ResponseEntity.ok(
                 ApiResponse.<CartResponse>builder()
@@ -25,10 +28,12 @@ public class CartController {
         );
     }
 
-    @PostMapping("/{userId}/add")
+    @PostMapping("/add")
     public ResponseEntity<ApiResponse<CartResponse>> addToCart(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Jwt jwt,
             @RequestBody AddToCartRequest request) {
+
+        Long userId = Long.valueOf(jwt.getClaimAsString("sub")); // Lấy userId từ token
 
         CartResponse updatedCart = cartService.addToCart(userId, request);
 
@@ -40,11 +45,12 @@ public class CartController {
         );
     }
 
-    @DeleteMapping("/{userId}/item/{productId}")
-    public ResponseEntity<ApiResponse<String>> removeItem(
-            @PathVariable Long userId,
-            @PathVariable Long productId) {
 
+    @DeleteMapping("/item/{productId}")
+    public ResponseEntity<ApiResponse<String>> removeItem(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long productId) {
+        Long userId = Long.valueOf(jwt.getClaimAsString("sub"));
         cartService.removeItem(userId, productId);
 
         return ResponseEntity.ok(
@@ -55,8 +61,9 @@ public class CartController {
         );
     }
 
-    @DeleteMapping("/{userId}/clear")
-    public ResponseEntity<ApiResponse<String>> clearCart(@PathVariable Long userId) {
+    @DeleteMapping("/clear")
+    public ResponseEntity<ApiResponse<String>> clearCart(@AuthenticationPrincipal Jwt jwt) {
+        Long userId = Long.valueOf(jwt.getClaimAsString("sub"));
         cartService.clearCart(userId);
 
         return ResponseEntity.ok(

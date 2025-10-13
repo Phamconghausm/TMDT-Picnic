@@ -58,8 +58,10 @@ public class AuthenticationService {
 
     public String generateToken(User user) {
         JWSHeader jwsHeader = new JWSHeader(JWSAlgorithm.HS512);
+        String userId = String.valueOf(user.getId());
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
-                .subject(user.getUsername())
+                //.subject(user.getUserName());
+                .subject(userId)
                 .issuer("TMDTPicnic.com")
                 .jwtID(UUID.randomUUID().toString())
                 .issueTime(new Date())

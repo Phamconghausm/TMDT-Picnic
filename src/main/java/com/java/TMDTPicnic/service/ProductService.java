@@ -27,39 +27,13 @@ public class ProductService {
 
     //Page product
     public ProductResponse createProduct(ProductRequest request) {
-        if (productRepository.existsBySlug(request.getSlug())) {
-            throw new RuntimeException("Slug already exists!");
-        }
-
-        Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found"));
-
-        Product product = Product.builder()
-                .name(request.getName())
-                .slug(request.getSlug())
-                .description(request.getDescription())
-                .price(request.getPrice())
-                .stockQuantity(request.getStockQuantity())
-                .unit(request.getUnit())
-                .isActive(request.getIsActive())
-                .createdAt(LocalDateTime.now())
-                .category(category)
-                .build();
-
-        List<ProductImage> images = request.getImages().stream()
-                .map(img -> ProductImage.builder()
-                        .url(img.getUrl())
-                        .altText(img.getAltText())
-                        .product(product)
-                        .build())
-                .collect(Collectors.toList());
-
-        product.setImages(images);
-
-        Product saved = productRepository.save(product);
-
-        return mapToResponse(saved);
+        return null;
     }
+
+    public ProductResponse updateProduct(Long id, ProductRequest request) {
+        return null;
+    }
+
 
     public Page<ProductResponse> getAllProducts(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());

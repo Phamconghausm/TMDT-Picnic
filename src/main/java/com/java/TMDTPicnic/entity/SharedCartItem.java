@@ -20,6 +20,9 @@ public class SharedCartItem {
     @JoinColumn(name = "product_id")
     private Product product;
 
-    private Integer qty;
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+    private Integer quantity;
     private BigDecimal priceAtAdd;
 }
