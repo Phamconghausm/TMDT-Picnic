@@ -30,9 +30,9 @@ public class ActiveUserFilter extends OncePerRequestFilter {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication != null && authentication.isAuthenticated()) {
-            String username = authentication.getName();
-            User user = userRepository.findByUsername(username).orElse(null);
-
+            Long userId = Long.valueOf(authentication.getName());
+            User user = userRepository.findById(userId).orElse(null);
+            System.out.println("Authenticated user: " + authentication.getName());
             if (user == null || Boolean.FALSE.equals(user.getIsActive())) {
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 response.getWriter().write("Tài khoản đã bị vô hiệu hóa.");

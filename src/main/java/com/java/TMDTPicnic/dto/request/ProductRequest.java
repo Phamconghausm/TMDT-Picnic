@@ -15,5 +15,5 @@ public class ProductRequest {
     private String unit;
     private Boolean isActive;
     private Long categoryId;
-    private List<ProductImageRequest> images;
+//    private List<ProductImageRequest> images;
 }

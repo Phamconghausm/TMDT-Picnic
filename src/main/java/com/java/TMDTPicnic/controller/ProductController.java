@@ -1,5 +1,6 @@
 package com.java.TMDTPicnic.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.java.TMDTPicnic.dto.request.ProductRequest;
 import com.java.TMDTPicnic.dto.response.ProductResponse;
 import com.java.TMDTPicnic.service.ProductService;
@@ -12,29 +13,39 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import com.java.TMDTPicnic.dto.response.ApiResponse;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
 public class ProductController {
+
     private final ProductService productService;
 
     // === CREATE PRODUCT (ADMIN only) ===
-    @PostMapping
+    @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestBody ProductRequest request) {
+            @RequestPart("product") String productJson, // <-- đổi sang String
+            @RequestPart(value = "images", required = false) List<MultipartFile> images
+    ) throws Exception {
 
-        // Kiểm tra role từ JWT (nếu muốn)
-        if (!jwt.getClaimAsString("role").equals("ADMIN")) {
+        // Kiểm tra quyền
+        if (!jwt.getClaimAsString("scope").equals("ROLE_ADMIN")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.<ProductResponse>builder()
                             .message("Không có quyền thực hiện")
                             .build());
         }
 
-        ProductResponse createdProduct = productService.createProduct(request);
+        // Parse JSON thủ công thành ProductRequest object
+        ObjectMapper mapper = new ObjectMapper();
+        ProductRequest request = mapper.readValue(productJson, ProductRequest.class);
+
+        ProductResponse createdProduct = productService.createProduct(request, images);
+
         return ResponseEntity.ok(
                 ApiResponse.<ProductResponse>builder()
                         .message("Tạo sản phẩm thành công")
@@ -42,6 +53,8 @@ public class ProductController {
                         .build()
         );
     }
+
+
     // === GET ALL PRODUCTS (public) ===
     @GetMapping
     @Operation(summary = "Lấy danh sách sản phẩm (có phân trang)")
@@ -57,6 +70,7 @@ public class ProductController {
                         .build()
         );
     }
+
     // === GET PRODUCT BY ID (public) ===
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductResponse>> getProductById(@PathVariable Long id) {
@@ -68,21 +82,28 @@ public class ProductController {
                         .build()
         );
     }
+
     // === UPDATE PRODUCT (ADMIN only) ===
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long id,
-            @RequestBody ProductRequest request) {
-
-        if (!jwt.getClaimAsString("role").equals("ADMIN")) {
+            @RequestPart("product") String productJson,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images
+    ) throws Exception {
+        // Kiểm tra quyền
+        if (!jwt.getClaimAsString("scope").equals("ROLE_ADMIN")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.<ProductResponse>builder()
                             .message("Không có quyền thực hiện")
                             .build());
         }
 
-        ProductResponse updatedProduct = productService.updateProduct(id, request);
+        // Parse JSON thủ công thành ProductRequest object
+        ObjectMapper mapper = new ObjectMapper();
+        ProductRequest request = mapper.readValue(productJson, ProductRequest.class);
+
+        ProductResponse updatedProduct = productService.updateProduct(id, request, images);
         return ResponseEntity.ok(
                 ApiResponse.<ProductResponse>builder()
                         .message("Cập nhật sản phẩm thành công")
@@ -90,14 +111,15 @@ public class ProductController {
                         .build()
         );
     }
-    // === UPDATE PRODUCT (ADMIN only) ===
+
+
+    // === DELETE PRODUCT (ADMIN only) ===
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Long id,
-            @RequestBody ProductRequest request
+            @PathVariable Long id
     ) {
-        if (!jwt.getClaimAsString("role").equals("ADMIN")) {
+        if (!jwt.getClaimAsString("scope").equals("ROLE_ADMIN")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.<Void>builder()
                             .message("Không có quyền thực hiện")
