@@ -48,7 +48,7 @@ public class ProductService {
             product.setCategory(category);
         }
 
-        productRepository.save(product);
+//        productRepository.save(product);
 
         // Upload tất cả ảnh
         if (imageFiles != null && !imageFiles.isEmpty()) {

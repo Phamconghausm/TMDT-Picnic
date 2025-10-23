@@ -73,6 +73,7 @@ public class ProductController {
 
     // === GET PRODUCT BY ID (public) ===
     @GetMapping("/{id}")
+    @Operation(summary = "Truyền id sản phẩm để lấy sản phẩm")
     public ResponseEntity<ApiResponse<ProductResponse>> getProductById(@PathVariable Long id) {
         ProductResponse product = productService.getProductById(id);
         return ResponseEntity.ok(
@@ -115,6 +116,7 @@ public class ProductController {
 
     // === DELETE PRODUCT (ADMIN only) ===
     @DeleteMapping("/{id}")
+    @Operation(summary = "Truyền id sản phẩm để xóa sản phẩm")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long id

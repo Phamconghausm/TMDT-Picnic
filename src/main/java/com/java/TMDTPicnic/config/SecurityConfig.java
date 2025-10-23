@@ -35,6 +35,7 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/swagger-ui.html",
 //            "/api/cart/**" // TẤT CẢ method (GET/POST/PUT/DELETE) với /api/cart/** đều PUBLIC
+            "/api/shared-carts"
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {

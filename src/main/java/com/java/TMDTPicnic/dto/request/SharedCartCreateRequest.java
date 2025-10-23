@@ -4,10 +4,16 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.java.TMDTPicnic.entity.User;
 import com.java.TMDTPicnic.enums.SharedCartStatus;
 import jakarta.persistence.*;
+import lombok.Builder;
+import lombok.Data;
 
 import java.time.LocalDateTime;
 
-public class SharedCartRequest {
+@Data
+@Builder
+public class SharedCartCreateRequest {
     private String title;
-    private SharedCartStatus status;
+    private Long ownerId; //userId
+    private LocalDateTime expiresAt;
 }
+
