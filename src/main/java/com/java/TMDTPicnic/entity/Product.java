@@ -35,6 +35,7 @@ public class Product {
 
     private Boolean isActive;
 
+    private BigDecimal discountRate;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 

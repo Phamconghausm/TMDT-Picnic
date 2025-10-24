@@ -125,6 +125,7 @@ public class ProductService {
                 .id(product.getId())
                 .name(product.getName())
                 .slug(product.getSlug())
+                .discountRate(product.getDiscountRate())
                 .description(product.getDescription())
                 .price(product.getPrice())
                 .stockQuantity(product.getStockQuantity())
