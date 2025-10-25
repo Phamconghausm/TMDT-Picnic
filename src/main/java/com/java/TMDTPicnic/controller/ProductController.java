@@ -60,11 +60,20 @@ public class ProductController {
 
     // === LỌC SẢN PHẨM THEO LOẠI (mới nhất, giảm giá, bán chạy) ===
     @GetMapping("/filter")
-    @Operation(summary = "LỌC SẢN PHẨM THEO LOẠI (newest, discount, best-seller)")
-    public ResponseEntity<Map<String, Object>> getProductsByFilter(
+    @Operation(summary = "Lọc sản phẩm theo loại (newest, discount, best-seller)")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getProductsByFilter(
             @RequestParam String filter) {
-        return ResponseEntity.ok(productService.getProductsByFilter(filter));
+
+        Map<String, Object> data = productService.getProductsByFilter(filter);
+
+        return ResponseEntity.ok(
+                ApiResponse.<Map<String, Object>>builder()
+                        .message("Lấy sản phẩm theo filter thành công")
+                        .data(data)
+                        .build()
+        );
     }
+
 
     // === LẤY CHI TIẾT SẢN PHẨM THEO ID ===
     @GetMapping("/{id}")
