@@ -11,15 +11,14 @@ import com.java.TMDTPicnic.entity.ProductImage;
 import com.java.TMDTPicnic.repository.CategoryRepository;
 import com.java.TMDTPicnic.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -30,6 +29,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final Cloudinary cloudinary;
+
     // Tạo sản phẩm kèm upload nhiều ảnh
     public ProductResponse createProduct(ProductRequest request, List<MultipartFile> imageFiles) {
         Product product = new Product();
@@ -48,14 +48,11 @@ public class ProductService {
             product.setCategory(category);
         }
 
-//        productRepository.save(product);
-
-        // Upload tất cả ảnh
         if (imageFiles != null && !imageFiles.isEmpty()) {
             for (MultipartFile file : imageFiles) {
                 ProductImage image = uploadImageToCloudinary(file, product);
-                image.setProduct(product); // Quan trọng
-                product.getImages().add(image); // Lưu vào danh sách ảnh của product
+                image.setProduct(product);
+                product.getImages().add(image);
             }
         }
 
@@ -63,7 +60,7 @@ public class ProductService {
         return mapToResponse(product);
     }
 
-    // Cập nhật sản phẩm kèm upload thêm nhiều ảnh
+    // Cập nhật sản phẩm
     public ProductResponse updateProduct(Long id, ProductRequest request, List<MultipartFile> imageFiles) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
@@ -82,7 +79,6 @@ public class ProductService {
             product.setCategory(category);
         }
 
-        // Upload thêm ảnh mới
         if (imageFiles != null && !imageFiles.isEmpty()) {
             for (MultipartFile file : imageFiles) {
                 ProductImage image = uploadImageToCloudinary(file, product);
@@ -94,18 +90,108 @@ public class ProductService {
         return mapToResponse(product);
     }
 
-
-    public Page<ProductResponse> getAllProducts(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-
-
-//        return productRepository.findAll()
-//                .stream().map(this::mapToResponse)
-//                .collect(Collectors.toList());
-        Page<Product> productsPage = productRepository.findAll(pageable);
-
-        return productsPage.map(this::mapToResponse);
+    // Lấy toàn bộ sản phẩm
+    public List<ProductResponse> getAllProducts() {
+        List<Product> products = productRepository.findAll();
+        return products.stream().map(this::mapToResponse).toList();
     }
+
+    // Lọc sản phẩm theo tiêu chí
+    public Map<String, Object> getProductsByFilter(String filter) {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        List<Category> categories = categoryRepository.findAll();
+
+        switch (filter.toLowerCase()) {
+
+            // === FEATURED ===
+            case "featured" -> {
+                List<ProductResponse> featuredProducts = productRepository
+                        .findByIsFeaturedTrue()
+                        .stream()
+                        .map(this::mapToResponse)
+                        .toList();
+
+                result.put("products", featuredProducts);
+            }
+
+            // === NEWEST ===
+            case "newest" -> {
+                List<ProductResponse> latestProducts = productRepository
+                        .findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+                        .stream()
+                        .map(this::mapToResponse)
+                        .toList();
+
+                List<Map<String, Object>> latestByCategory = new ArrayList<>();
+                for (Category category : categories) {
+                    List<Product> products = productRepository
+                            .findByCategoryIdOrderByCreatedAtDesc(category.getId());
+                    latestByCategory.add(Map.of(
+                            "categoryId", category.getId(),
+                            "categoryName", category.getName(),
+                            "products", products.stream().map(this::mapToResponse).toList()
+                    ));
+                }
+
+                result.put("products", latestProducts);
+                result.put("productsByCategory", latestByCategory);
+            }
+
+            // === DISCOUNT ===
+            case "discount" -> {
+                List<ProductResponse> discountProducts = productRepository
+                        .findByDiscountRateGreaterThan(BigDecimal.ZERO)
+                        .stream()
+                        .sorted((a, b) -> b.getDiscountRate().compareTo(a.getDiscountRate()))
+                        .map(this::mapToResponse)
+                        .toList();
+
+                List<Map<String, Object>> discountByCategory = new ArrayList<>();
+                for (Category category : categories) {
+                    List<Product> products = productRepository
+                            .findByCategoryIdAndDiscountRateGreaterThanOrderByDiscountRateDesc(
+                                    category.getId(), BigDecimal.ZERO);
+                    discountByCategory.add(Map.of(
+                            "categoryId", category.getId(),
+                            "categoryName", category.getName(),
+                            "products", products.stream().map(this::mapToResponse).toList()
+                    ));
+                }
+
+                result.put("products", discountProducts);
+                result.put("productsByCategory", discountByCategory);
+            }
+
+            // === BEST SELLER ===
+            case "best-seller" -> {
+                List<ProductResponse> bestSellers = productRepository
+                        .findAll(Sort.by(Sort.Direction.DESC, "soldQuantity"))
+                        .stream()
+                        .map(this::mapToResponse)
+                        .toList();
+
+                List<Map<String, Object>> bestByCategory = new ArrayList<>();
+                for (Category category : categories) {
+                    List<Product> products = productRepository
+                            .findByCategoryIdOrderBySoldQuantityDesc(category.getId());
+                    bestByCategory.add(Map.of(
+                            "categoryId", category.getId(),
+                            "categoryName", category.getName(),
+                            "products", products.stream().map(this::mapToResponse).toList()
+                    ));
+                }
+
+                result.put("products", bestSellers);
+                result.put("productsByCategory", bestByCategory);
+            }
+
+            default -> throw new IllegalArgumentException("Invalid filter type: " + filter);
+        }
+
+        return result;
+    }
+
+
 
     public ProductResponse getProductById(Long id) {
         Product product = productRepository.findById(id)
@@ -119,29 +205,8 @@ public class ProductService {
         }
         productRepository.deleteById(id);
     }
-    public List<ProductResponse> getProductsByType(String type) {
-        List<Product> products;
-        switch (type.toLowerCase()) {
-            case "featured": // Nổi bật
-                products = productRepository.findByIsFeaturedTrue();
-                break;
-//            case "newest": // Mới nhất
-//                products = productRepository.findTop10ByOrderByCreatedAtDesc();
-//                break;
-//
-//            case "bestseller": // Bán chạy
-//                products = productRepository.findTop10ByOrderBySoldQuantityDesc();
-//                break;
-//
-            case "discount": // Giảm giá
-                products = productRepository.findByDiscountRateGreaterThan(0);
-                break;
-            default:
-                products = productRepository.findAll();
-        }
-        return products.stream().map(this::mapToResponse).toList();
-    }
 
+    // Chuyển đổi entity sang DTO
     private ProductResponse mapToResponse(Product product) {
         return ProductResponse.builder()
                 .id(product.getId())
@@ -152,6 +217,7 @@ public class ProductService {
                 .price(product.getPrice())
                 .stockQuantity(product.getStockQuantity())
                 .unit(product.getUnit())
+                .soldQuantity(product.getSoldQuantity())
                 .isActive(product.getIsActive())
                 .createdAt(product.getCreatedAt())
                 .isFeatured(product.getIsFeatured())
@@ -167,7 +233,7 @@ public class ProductService {
                 .build();
     }
 
-    // Hàm để upload ảnh lên Cloudinary
+    // Upload ảnh lên Cloudinary
     private ProductImage uploadImageToCloudinary(MultipartFile file, Product product) {
         try {
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(),

@@ -30,7 +30,7 @@ public class Product {
     private BigDecimal price;
 
     private Integer stockQuantity;
-
+    private Integer soldQuantity;
     private String unit; // e.g., piece, box
     private Boolean isFeatured;
     private Boolean isActive;

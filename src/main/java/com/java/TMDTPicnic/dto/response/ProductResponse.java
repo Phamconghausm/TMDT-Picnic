@@ -24,4 +24,5 @@ public class ProductResponse {
     private LocalDateTime createdAt;
     private BigDecimal discountRate;
     private Boolean isFeatured;
+    private Integer soldQuantity;
 }
