@@ -54,6 +54,18 @@ public class ProductController {
         );
     }
 
+    @GetMapping("/type")
+    public ResponseEntity<ApiResponse<List<ProductResponse>>> getProductsByType(
+            @RequestParam(defaultValue = "all") String type) {
+
+        List<ProductResponse> products = productService.getProductsByType(type);
+        return ResponseEntity.ok(
+                ApiResponse.<List<ProductResponse>>builder()
+                        .message("Lấy danh sách sản phẩm thành công")
+                        .data(products)
+                        .build()
+        );
+    }
 
     // === GET ALL PRODUCTS (public) ===
     @GetMapping

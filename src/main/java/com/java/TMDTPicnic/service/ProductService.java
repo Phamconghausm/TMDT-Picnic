@@ -119,6 +119,28 @@ public class ProductService {
         }
         productRepository.deleteById(id);
     }
+    public List<ProductResponse> getProductsByType(String type) {
+        List<Product> products;
+        switch (type.toLowerCase()) {
+            case "featured": // Nổi bật
+                products = productRepository.findByIsFeaturedTrue();
+                break;
+//            case "newest": // Mới nhất
+//                products = productRepository.findTop10ByOrderByCreatedAtDesc();
+//                break;
+//
+//            case "bestseller": // Bán chạy
+//                products = productRepository.findTop10ByOrderBySoldQuantityDesc();
+//                break;
+//
+            case "discount": // Giảm giá
+                products = productRepository.findByDiscountRateGreaterThan(0);
+                break;
+            default:
+                products = productRepository.findAll();
+        }
+        return products.stream().map(this::mapToResponse).toList();
+    }
 
     private ProductResponse mapToResponse(Product product) {
         return ProductResponse.builder()
@@ -132,6 +154,7 @@ public class ProductService {
                 .unit(product.getUnit())
                 .isActive(product.getIsActive())
                 .createdAt(product.getCreatedAt())
+                .isFeatured(product.getIsFeatured())
                 .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
                 .categoryName(product.getCategory() != null ? product.getCategory().getName() : null)
                 .images(product.getImages() != null ? product.getImages().stream()

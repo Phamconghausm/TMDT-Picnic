@@ -23,5 +23,5 @@ public class ProductResponse {
     private List<ProductImageResponse> images;
     private LocalDateTime createdAt;
     private BigDecimal discountRate;
-
+    private Boolean isFeatured;
 }
