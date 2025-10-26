@@ -119,8 +119,9 @@ public class ProductService {
             // === DISCOUNT ===
             case "discount" -> {
                 return productRepository.findByDiscountRateGreaterThan(BigDecimal.ZERO)
-                        .stream().limit(10)
+                        .stream()
                         .sorted((a, b) -> b.getDiscountRate().compareTo(a.getDiscountRate()))
+                        .limit(10)
                         .map(this::mapToResponse)
                         .toList();
             }
