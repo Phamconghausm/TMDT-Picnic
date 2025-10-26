@@ -96,100 +96,47 @@ public class ProductService {
         return products.stream().map(this::mapToResponse).toList();
     }
 
-    // Lọc sản phẩm theo tiêu chí
-    public Map<String, Object> getProductsByFilter(String filter) {
-        Map<String, Object> result = new java.util.LinkedHashMap<>();
-        List<Category> categories = categoryRepository.findAll();
-
+    // Lọc sản phẩm theo tiêu chí, không phân theo category
+    public List<ProductResponse> getProductsByFilter(String filter) {
         switch (filter.toLowerCase()) {
 
             // === FEATURED ===
             case "featured" -> {
-                List<ProductResponse> featuredProducts = productRepository
-                        .findByIsFeaturedTrue()
-                        .stream()
+                return productRepository.findByIsFeaturedTrue()
+                        .stream().limit(10)
                         .map(this::mapToResponse)
                         .toList();
-
-                result.put("products", featuredProducts);
             }
 
             // === NEWEST ===
             case "newest" -> {
-                List<ProductResponse> latestProducts = productRepository
-                        .findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
-                        .stream()
+                return productRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+                        .stream().limit(10)
                         .map(this::mapToResponse)
                         .toList();
-
-                List<Map<String, Object>> latestByCategory = new ArrayList<>();
-                for (Category category : categories) {
-                    List<Product> products = productRepository
-                            .findByCategoryIdOrderByCreatedAtDesc(category.getId());
-                    latestByCategory.add(Map.of(
-                            "categoryId", category.getId(),
-                            "categoryName", category.getName(),
-                            "products", products.stream().map(this::mapToResponse).toList()
-                    ));
-                }
-
-                result.put("products", latestProducts);
-                result.put("productsByCategory", latestByCategory);
             }
 
             // === DISCOUNT ===
             case "discount" -> {
-                List<ProductResponse> discountProducts = productRepository
-                        .findByDiscountRateGreaterThan(BigDecimal.ZERO)
-                        .stream()
+                return productRepository.findByDiscountRateGreaterThan(BigDecimal.ZERO)
+                        .stream().limit(10)
                         .sorted((a, b) -> b.getDiscountRate().compareTo(a.getDiscountRate()))
                         .map(this::mapToResponse)
                         .toList();
-
-                List<Map<String, Object>> discountByCategory = new ArrayList<>();
-                for (Category category : categories) {
-                    List<Product> products = productRepository
-                            .findByCategoryIdAndDiscountRateGreaterThanOrderByDiscountRateDesc(
-                                    category.getId(), BigDecimal.ZERO);
-                    discountByCategory.add(Map.of(
-                            "categoryId", category.getId(),
-                            "categoryName", category.getName(),
-                            "products", products.stream().map(this::mapToResponse).toList()
-                    ));
-                }
-
-                result.put("products", discountProducts);
-                result.put("productsByCategory", discountByCategory);
             }
 
             // === BEST SELLER ===
             case "best-seller" -> {
-                List<ProductResponse> bestSellers = productRepository
-                        .findAll(Sort.by(Sort.Direction.DESC, "soldQuantity"))
-                        .stream()
+                return productRepository.findAll(Sort.by(Sort.Direction.DESC, "soldQuantity"))
+                        .stream().limit(10)
                         .map(this::mapToResponse)
                         .toList();
-
-                List<Map<String, Object>> bestByCategory = new ArrayList<>();
-                for (Category category : categories) {
-                    List<Product> products = productRepository
-                            .findByCategoryIdOrderBySoldQuantityDesc(category.getId());
-                    bestByCategory.add(Map.of(
-                            "categoryId", category.getId(),
-                            "categoryName", category.getName(),
-                            "products", products.stream().map(this::mapToResponse).toList()
-                    ));
-                }
-
-                result.put("products", bestSellers);
-                result.put("productsByCategory", bestByCategory);
             }
 
             default -> throw new IllegalArgumentException("Invalid filter type: " + filter);
         }
-
-        return result;
     }
+
 
 
 

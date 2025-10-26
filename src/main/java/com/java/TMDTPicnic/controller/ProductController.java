@@ -54,22 +54,35 @@ public class ProductController {
     // === LẤY DANH SÁCH SẢN PHẨM (KHÔNG PHÂN TRANG) ===
     @GetMapping("/all")
     @Operation(summary = "Lấy tất cả sản phẩm (không phân trang)")
-    public ResponseEntity<List<ProductResponse>> getAllProducts() {
-        return ResponseEntity.ok(productService.getAllProducts());
+    public ResponseEntity<ApiResponse<List<ProductResponse>>> getAllProducts() {
+        List<ProductResponse> products = productService.getAllProducts();
+        return ResponseEntity.ok(
+                ApiResponse.<List<ProductResponse>>builder()
+                        .message("Lấy tất cả sản phẩm thành công")
+                        .data(products)
+                        .build()
+        );
     }
 
     // === LỌC SẢN PHẨM THEO LOẠI (mới nhất, giảm giá, bán chạy) ===
     @GetMapping("/filter")
     @Operation(summary = "Lọc sản phẩm theo loại (newest, discount, best-seller)")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getProductsByFilter(
+    public ResponseEntity<ApiResponse<List<ProductResponse>>> getProductsByFilter(
             @RequestParam String filter) {
 
-        Map<String, Object> data = productService.getProductsByFilter(filter);
+        List<ProductResponse> products = productService.getProductsByFilter(filter);
 
+        String message = switch (filter.toLowerCase()) {
+            case "newest" -> "mới nhất";
+            case "discount" -> "giảm giá";
+            case "best-seller" -> "bán chạy";
+            case "featured" -> "nổi bật";
+            default -> "";
+        };
         return ResponseEntity.ok(
-                ApiResponse.<Map<String, Object>>builder()
-                        .message("Lấy sản phẩm theo filter thành công")
-                        .data(data)
+                ApiResponse.<List<ProductResponse>>builder()
+                        .message("Lấy danh sách sản phẩm " + message + " thành công")
+                        .data(products)
                         .build()
         );
     }
