@@ -89,6 +89,16 @@ public class ProductService {
         productRepository.save(product);
         return mapToResponse(product);
     }
+    // Lấy danh sách sản phẩm theo categoryId
+    public List<ProductResponse> getProductsByCategoryId(Long categoryId) {
+        List<Product> products = productRepository.findByCategoryId(categoryId);
+        if (products.isEmpty()) {
+            throw new RuntimeException("No products found for category ID: " + categoryId);
+        }
+        return products.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
 
     // Lấy toàn bộ sản phẩm
     public List<ProductResponse> getAllProducts() {

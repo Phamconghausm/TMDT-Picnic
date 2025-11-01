@@ -86,8 +86,18 @@ public class ProductController {
                         .build()
         );
     }
-
-
+    // Lấy sản phẩm theo categoryId
+    @Operation(summary = "Lấy chi tiết sản phẩm theo Category ID")
+    @GetMapping("/category/{categoryId}")
+    public ResponseEntity<ApiResponse<List<ProductResponse>>> getProductsByCategory(@PathVariable Long categoryId) {
+        List<ProductResponse> products = productService.getProductsByCategoryId(categoryId);
+        return ResponseEntity.ok(
+                ApiResponse.<List<ProductResponse>>builder()
+                        .message("Lấy danh sách sản phẩm theo thể loại thành công")
+                        .data(products)
+                        .build()
+        );
+    }
     // === LẤY CHI TIẾT SẢN PHẨM THEO ID ===
     @GetMapping("/{id}")
     @Operation(summary = "Lấy chi tiết sản phẩm theo ID")
