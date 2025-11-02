@@ -42,4 +42,11 @@ public class Product {
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
+
+    public String getThumbnail() {
+        if (images != null && !images.isEmpty()) {
+            return images.get(0).getUrl();
+        }
+        return null;
+    }
 }

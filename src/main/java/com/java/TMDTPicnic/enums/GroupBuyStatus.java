@@ -4,5 +4,6 @@ public enum GroupBuyStatus {
     ACTIVE,
     SUCCESS,
     FAILED,
+    EXPIRED,
     ENDED
 }

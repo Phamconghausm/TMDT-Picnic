@@ -35,17 +35,25 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/swagger-ui.html",
 //            "/api/cart/**" // TẤT CẢ method (GET/POST/PUT/DELETE) với /api/cart/** đều PUBLIC
-            "/api/shared-carts"
+            "/api/shared-carts",
+            "/api/addresses",
+            "/api/group-buy"
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {
             "/api/products/**",
-            "/api/categories/**"
+            "/api/categories/**",
+            "/api/group-buy/campaigns/active"
     };
 
     private static final String[] ADMIN_ENDPOINTS = {
             "/api/products/**",
-            "/api/categories/**"
+            "/api/categories/**",
+            "/api/group-buy/campaigns/**"
+    };
+    private static final String[] AUTH_REQUIRED_ENDPOINTS = {
+            "/api/addresses/**",
+            "/api/group-buy/commit/**"
     };
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity, ActiveUserFilter activeUserFilter) throws Exception {
@@ -61,6 +69,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, ADMIN_ENDPOINTS).hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, ADMIN_ENDPOINTS).hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, ADMIN_ENDPOINTS).hasRole("ADMIN")
+                        .requestMatchers(AUTH_REQUIRED_ENDPOINTS).authenticated()
 
                         // Các request còn lại -> cần login
                         .anyRequest().authenticated()
