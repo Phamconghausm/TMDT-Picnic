@@ -18,5 +18,5 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByDiscountRateGreaterThan(BigDecimal rate);
     List<Product> findByCategoryIdOrderBySoldQuantityDesc(Long categoryId);
     List<Product> findByCategoryIdAndDiscountRateGreaterThanOrderByDiscountRateDesc(Long categoryId, BigDecimal discountRate);
-
+    List<Product> findByCategoryId(Long categoryId);
 }
