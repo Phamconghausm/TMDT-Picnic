@@ -67,6 +67,7 @@ public class AuthenticationService {
                 .issueTime(new Date())
                 .expirationTime(new Date(Instant.now().plus(VALID_DURATION, ChronoUnit.SECONDS).toEpochMilli()))
                 .claim("scope", buildScope(user))
+                .claim("username", user.getUsername())
                 .claim("type", "access_token")
                 .build();
         return getSignerToken(jwsHeader, jwtClaimsSet);

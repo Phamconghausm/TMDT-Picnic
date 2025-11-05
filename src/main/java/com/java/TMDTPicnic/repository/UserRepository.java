@@ -12,8 +12,8 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
 
     // Tìm theo username (dùng để đăng nhập)
-    Optional<User> findByUsername(String username);
-
+    Optional<User> findById(Long userId);
+    Optional<User> findByUsername(String userName);
     Optional<User> findByEmail(String email);
 
     boolean existsByEmail(String email);
