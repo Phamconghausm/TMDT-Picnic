@@ -49,7 +49,7 @@ public class UserController {
 
     // Chỉ ADMIN mới có thể xem toàn bộ danh sách user
     @GetMapping
-    @Operation(summary = "Lấy danh sách người dùng - ADMIN")
+    @Operation(summary = "ROLE-ADMIN Lấy tất cả người dùng")
     public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers(@AuthenticationPrincipal Jwt jwt) {
         String role = jwt.getClaimAsString("scope");
 

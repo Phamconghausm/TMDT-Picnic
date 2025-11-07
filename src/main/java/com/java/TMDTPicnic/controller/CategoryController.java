@@ -4,6 +4,7 @@ import com.java.TMDTPicnic.dto.request.CategoryRequest;
 import com.java.TMDTPicnic.dto.response.ApiResponse;
 import com.java.TMDTPicnic.dto.response.CategoryResponse;
 import com.java.TMDTPicnic.service.CategoryService;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,7 @@ public class CategoryController {
 
     // === CREATE CATEGORY (ADMIN only) ===
     @PostMapping
+    @Operation(summary = "ROLE-ADMIN Thêm thể loại sản phẩm")
     public ResponseEntity<ApiResponse<CategoryResponse>> createCategory(
             @AuthenticationPrincipal Jwt jwt,
             @RequestBody CategoryRequest request) {
@@ -68,6 +70,7 @@ public class CategoryController {
 
     // === UPDATE CATEGORY (ADMIN only) ===
     @PutMapping("/{id}")
+    @Operation(summary = "ROLE-ADMIN Cập nhật thể loại sản phẩm")
     public ResponseEntity<ApiResponse<CategoryResponse>> updateCategory(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long id,
@@ -91,6 +94,7 @@ public class CategoryController {
 
     // === DELETE CATEGORY (ADMIN only) ===
     @DeleteMapping("/{id}")
+    @Operation(summary = "ROLE-ADMIN Xóa loại sản phẩm theo id")
     public ResponseEntity<ApiResponse<Void>> deleteCategory(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long id) {

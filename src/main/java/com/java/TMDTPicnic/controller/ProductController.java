@@ -27,6 +27,7 @@ public class ProductController {
 
     // === TẠO SẢN PHẨM (ADMIN) ===
     @PostMapping(consumes = {"multipart/form-data"})
+    @Operation(summary = "ROLE-ADMIN Tạo mới sản phẩm")
     public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
             @AuthenticationPrincipal Jwt jwt,
             @RequestPart("product") String productJson,
@@ -113,6 +114,7 @@ public class ProductController {
 
     // === CẬP NHẬT SẢN PHẨM (ADMIN) ===
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    @Operation(summary = "ROLE-ADMIN Cập nhật thông tin sản phẩm")
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long id,
@@ -140,7 +142,7 @@ public class ProductController {
 
     // === XÓA SẢN PHẨM (ADMIN) ===
     @DeleteMapping("/{id}")
-    @Operation(summary = "Xóa sản phẩm theo ID")
+    @Operation(summary = "ROLE-ADMIN Xóa sản phẩm theo id")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long id
