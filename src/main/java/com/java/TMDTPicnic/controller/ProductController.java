@@ -51,7 +51,18 @@ public class ProductController {
                         .build()
         );
     }
-
+    // === LẤY CHI TIẾT SẢN PHẨM THEO SLUG (DẠNG CHỮ) ===
+    @GetMapping("/detail/{slug}")
+    @Operation(summary = "Lấy chi tiết sản phẩm theo Slug")
+    public ResponseEntity<ApiResponse<ProductResponse>> getProductBySlug(@PathVariable String slug) { // <-- Nhận String
+        ProductResponse product = productService.getProductBySlug(slug); // Giả sử bạn có hàm này
+        return ResponseEntity.ok(
+                ApiResponse.<ProductResponse>builder()
+                        .message("Lấy sản phẩm thành công")
+                        .data(product)
+                        .build()
+        );
+    }
     // === LẤY DANH SÁCH SẢN PHẨM (KHÔNG PHÂN TRANG) ===
     @GetMapping("/all")
     @Operation(summary = "Lấy tất cả sản phẩm (không phân trang)")

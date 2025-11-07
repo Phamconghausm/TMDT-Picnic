@@ -59,6 +59,11 @@ public class ProductService {
         productRepository.save(product);
         return mapToResponse(product);
     }
+    public ProductResponse getProductBySlug(String slug) {
+        Product product = productRepository.findBySlug(slug)
+                .orElseThrow(() -> new RuntimeException("Product not found with slug: " + slug));
+        return mapToResponse(product);
+    }
 
     // Cập nhật sản phẩm
     public ProductResponse updateProduct(Long id, ProductRequest request, List<MultipartFile> imageFiles) {
