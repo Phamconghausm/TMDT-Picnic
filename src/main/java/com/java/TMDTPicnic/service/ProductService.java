@@ -11,6 +11,9 @@ import com.java.TMDTPicnic.entity.ProductImage;
 import com.java.TMDTPicnic.repository.CategoryRepository;
 import com.java.TMDTPicnic.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -94,21 +97,22 @@ public class ProductService {
         productRepository.save(product);
         return mapToResponse(product);
     }
-    // Lấy danh sách sản phẩm theo categoryId
-    public List<ProductResponse> getProductsByCategoryId(Long categoryId) {
-        List<Product> products = productRepository.findByCategoryId(categoryId);
+    // Lấy danh sách sản phẩm theo categoryId (phân trang)
+    public Page<ProductResponse> getProductsByCategoryId(Long categoryId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Product> products = productRepository.findByCategoryId(categoryId, pageable);
+
         if (products.isEmpty()) {
             throw new RuntimeException("No products found for category ID: " + categoryId);
         }
-        return products.stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
 
-    // Lấy toàn bộ sản phẩm
-    public List<ProductResponse> getAllProducts() {
-        List<Product> products = productRepository.findAll();
-        return products.stream().map(this::mapToResponse).toList();
+        return products.map(this::mapToResponse);
+    }
+    // Lấy toàn bộ sản phẩm (phân trang)
+    public Page<ProductResponse> getAllProducts(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Product> products = productRepository.findAll(pageable);
+        return products.map(this::mapToResponse);
     }
 
     // Lọc sản phẩm theo tiêu chí, không phân theo category

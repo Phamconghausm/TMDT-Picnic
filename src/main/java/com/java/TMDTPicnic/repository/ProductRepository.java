@@ -1,6 +1,7 @@
 package com.java.TMDTPicnic.repository;
 
 import com.java.TMDTPicnic.entity.Product;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -20,5 +21,5 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByDiscountRateGreaterThan(BigDecimal rate);
     List<Product> findByCategoryIdOrderBySoldQuantityDesc(Long categoryId);
     List<Product> findByCategoryIdAndDiscountRateGreaterThanOrderByDiscountRateDesc(Long categoryId, BigDecimal discountRate);
-    List<Product> findByCategoryId(Long categoryId);
+    Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
 }
