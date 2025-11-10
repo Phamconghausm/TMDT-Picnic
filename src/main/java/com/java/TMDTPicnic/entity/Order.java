@@ -26,6 +26,12 @@ public class Order {
 
     private String orderType; // SINGLE or GROUP (string for simplicity)
 
+    @ManyToOne
+    @JoinColumn(name = "coupon_id")
+    private Coupon coupon;
+
+    private String vnpTxnRef;
+    
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 }

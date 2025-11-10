@@ -41,3 +41,10 @@ cloudinary:
   api-secret: ${CLOUDINARY_API_SECRET}
 profiles:
   active: ${SPRING_PROFILES_ACTIVE:dev}
+
+vnpay:
+  pay-url: ${PAY_URL}
+  return-url: ${RETURN_URL}
+  tmn-code: ${TMN_CODE}
+  secret-key: ${SECRET_KEY}
+  api-url: ${API_URL}

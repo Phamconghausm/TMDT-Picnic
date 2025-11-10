@@ -69,5 +69,26 @@ public class UserController {
         );
     }
 
+    // Ẩn user
+    @PutMapping("/{id}/block")
+    public ResponseEntity<String> hideUser(@PathVariable Long id) {
+        boolean result = userService.hideUserById(id);
+        if (result) {
+            return ResponseEntity.ok("User " + id + " đã bị ẩn.");
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // Hiện lại user
+    @PutMapping("/{id}/unblock")
+    public ResponseEntity<String> unhideUser(@PathVariable Long id) {
+        boolean result = userService.unhideUserById(id);
+        if (result) {
+            return ResponseEntity.ok("User " + id + " đã được hiển thị lại.");
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }
 
