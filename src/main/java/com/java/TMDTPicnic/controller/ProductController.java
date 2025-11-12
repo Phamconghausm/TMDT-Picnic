@@ -143,7 +143,7 @@ public class ProductController {
     }
 
     // === LẤY CHI TIẾT SẢN PHẨM THEO ID ===
-    @GetMapping("/{id}")
+    @GetMapping("/detail/{id}")
     @Operation(summary = "Lấy chi tiết sản phẩm theo ID")
     public ResponseEntity<ApiResponse<ProductResponse>> getProductById(@PathVariable Long id) {
         ProductResponse product = productService.getProductById(id);
@@ -201,6 +201,55 @@ public class ProductController {
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
                         .message("Xoá sản phẩm thành công")
+                        .build()
+        );
+    }
+    // =============================
+    // ẨN SẢN PHẨM
+    // =============================
+    @PatchMapping("/{id}/hide")
+    @Operation(summary = "ROLE-ADMIN Ẩn sản phẩm theo id")
+    public ResponseEntity<ApiResponse<ProductResponse>> hideProduct(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long id
+    ) {
+        if (!"ROLE_ADMIN".equals(jwt.getClaimAsString("scope"))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.<ProductResponse>builder()
+                            .message("Không có quyền thực hiện")
+                            .build());
+        }
+
+        ProductResponse response = productService.hideProduct(id);
+        return ResponseEntity.ok(
+                ApiResponse.<ProductResponse>builder()
+                        .message("Ẩn sản phẩm thành công")
+                        .data(response)
+                        .build()
+        );
+    }
+
+    // =============================
+    // HIỆN SẢN PHẨM
+    // =============================
+    @PatchMapping("/{id}/unhide")
+    @Operation(summary = "ROLE-ADMIN Hiện lại sản phẩm theo id")
+    public ResponseEntity<ApiResponse<ProductResponse>> unhideProduct(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long id
+    ) {
+        if (!"ROLE_ADMIN".equals(jwt.getClaimAsString("scope"))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.<ProductResponse>builder()
+                            .message("Không có quyền thực hiện")
+                            .build());
+        }
+
+        ProductResponse response = productService.unhideProduct(id);
+        return ResponseEntity.ok(
+                ApiResponse.<ProductResponse>builder()
+                        .message("Hiện sản phẩm thành công")
+                        .data(response)
                         .build()
         );
     }

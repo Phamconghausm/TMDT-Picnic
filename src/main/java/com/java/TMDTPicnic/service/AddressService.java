@@ -92,6 +92,37 @@ public class AddressService {
         return true;
     }
 
+    // 🟡 Cập nhật địa chỉ nếu thuộc về user (trả về AddressResponse nếu thành công, null nếu không có quyền)
+    @Transactional
+    public AddressResponse updateAddressIfOwnedByUser(Long id, Long userId, AddressRequest request) {
+        Address address = addressRepository.findById(id).orElse(null);
+        if (address == null) {
+            return null;
+        }
+        if (address.getUser() == null || !address.getUser().getId().equals(userId)) {
+            return null;
+        }
+
+        Long addressUserId = address.getUser().getId();
+
+        // Nếu cập nhật thành mặc định → bỏ mặc định các địa chỉ khác
+        if (Boolean.TRUE.equals(request.getIsDefault())) {
+            addressRepository.updateAllIsDefaultFalse(addressUserId);
+        }
+
+        address.setLabel(request.getLabel());
+        address.setRecipientName(request.getRecipientName());
+        address.setPhone(request.getPhone());
+        address.setProvince(request.getProvince());
+        address.setDistrict(request.getDistrict());
+        address.setWard(request.getWard());
+        address.setDetail(request.getDetail());
+        address.setIsDefault(request.getIsDefault() != null ? request.getIsDefault() : false);
+
+        addressRepository.save(address);
+        return toResponse(address);
+    }
+
     // 🟣 Lấy danh sách địa chỉ của user
     public List<AddressResponse> getUserAddresses(Long userId) {
         User user = userRepository.findById(userId).orElseThrow();

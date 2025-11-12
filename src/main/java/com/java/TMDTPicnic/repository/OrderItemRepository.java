@@ -1,7 +1,7 @@
 package com.java.TMDTPicnic.repository;
-//
-//import org.springframework.data.jpa.repository.JpaRepository;
-//import org.springframework.stereotype.Repository;
-//
-//public interface OrderItemRepository extends JpaRepository<OrderItemRepository, Long> {
-//}
+
+import com.java.TMDTPicnic.entity.OrderItem;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
+}

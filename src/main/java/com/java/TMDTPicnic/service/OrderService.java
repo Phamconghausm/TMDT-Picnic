@@ -1,15 +1,198 @@
 package com.java.TMDTPicnic.service;
 
-import com.java.TMDTPicnic.repository.*;
+import com.java.TMDTPicnic.dto.request.CheckoutRequest;
+import com.java.TMDTPicnic.entity.*;
+import com.java.TMDTPicnic.enums.OrderStatus;
+import com.java.TMDTPicnic.enums.PaymentMethod;
+import com.java.TMDTPicnic.enums.PaymentStatus;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.java.TMDTPicnic.repository.*;
+import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 @RequiredArgsConstructor
 public class OrderService {
-//    private final OrderRepository orderRepository;
-//    private final OrderItemRepository orderItemRepository;
-//    private final PaymentRepository paymentRepository;
+
+    private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
+
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final CartItemRepository cartItemRepository;
+    private final VNPayService vnPayService;
+
+    @Transactional
+    public String createOrder(Long userId, CheckoutRequest request, String ipAddress) throws UnsupportedEncodingException {
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        BigDecimal total = BigDecimal.ZERO;
+
+        if ("GROUP".equalsIgnoreCase(request.getOrderType())) {
+            List<Long> cartItemIds = new ArrayList<>();
+            if (request.getCartItems() != null) {
+                for (var cartItem : request.getCartItems()) {
+                    cartItemIds.add(cartItem.getId());
+                }
+            }
+
+            if (cartItemIds.isEmpty()) {
+                throw new RuntimeException("No items selected in cart");
+            }
+
+            var cartItems = cartItemRepository.findAllById(cartItemIds);
+
+            for (var item : cartItems) {
+                var product = item.getProduct();
+                if (product.getStockQuantity() < item.getQuantity()) {
+                    throw new RuntimeException("Product " + product.getName() + " out of stock");
+                }
+                total = total.add(product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+            }
+
+            Order order = Order.builder()
+                    .user(user)
+                    .totalAmount(total)
+                    .status(OrderStatus.PENDING)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            orderRepository.save(order);
+
+            for (var item : cartItems) {
+                var product = item.getProduct();
+
+                product.setStockQuantity(product.getStockQuantity() - item.getQuantity());
+                productRepository.save(product);
+
+                OrderItem orderItem = OrderItem.builder()
+                        .order(order)
+                        .product(product)
+                        .qty(item.getQuantity())
+                        .unitPrice(product.getPrice())
+                        .build();
+                orderItemRepository.save(orderItem);
+            }
+
+            Payment payment = Payment.builder()
+                    .order(order)
+                    .amount(total)
+                    .paymentMethod(request.getPaymentMethod().name())
+                    .status(PaymentStatus.PENDING)
+                    .paidAt(null)
+                    .build();
+            paymentRepository.save(payment);
+
+            cartItemRepository.deleteAll(cartItems);
+
+            if (request.getPaymentMethod() == PaymentMethod.COD) {
+                order.setStatus(OrderStatus.COMPLETED);
+                orderRepository.save(order);
+
+                payment.setStatus(PaymentStatus.SUCCESS);
+                payment.setPaidAt(LocalDateTime.now());
+                paymentRepository.save(payment);
+                return ""; // Không cần url thanh toán
+            } else if (request.getPaymentMethod() == PaymentMethod.MOMO) {
+                // Xử lý MOMO ở đây (hiện để trống)
+                return "";
+            } else if (request.getPaymentMethod() == PaymentMethod.VNPAY) {
+                return vnPayService.createPaymentUrl(order.getId(), total, ipAddress);
+            } else {
+                throw new RuntimeException("Unsupported payment method");
+            }
+
+        } else if ("SINGLE".equalsIgnoreCase(request.getOrderType())) {
+            if (request.getDirectItems() == null || request.getDirectItems().isEmpty()) {
+                throw new RuntimeException("No items to checkout");
+            }
+
+            for (var item : request.getDirectItems()) {
+                var product = productRepository.findById(item.getProductId())
+                        .orElseThrow(() -> new RuntimeException("Product not found with id: " + item.getProductId()));
+                if (product.getStockQuantity() < item.getQty()) {
+                    throw new RuntimeException("Product " + product.getName() + " out of stock");
+                }
+                total = total.add(product.getPrice().multiply(BigDecimal.valueOf(item.getQty())));
+            }
+
+            Order order = Order.builder()
+                    .user(user)
+                    .totalAmount(total)
+                    .status(OrderStatus.PENDING)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            orderRepository.save(order);
+
+            for (var item : request.getDirectItems()) {
+                var product = productRepository.findById(item.getProductId())
+                        .orElseThrow(() -> new RuntimeException("Product not found with id: " + item.getProductId()));
+
+                product.setStockQuantity(product.getStockQuantity() - item.getQty());
+                productRepository.save(product);
+
+                OrderItem orderItem = OrderItem.builder()
+                        .order(order)
+                        .product(product)
+                        .qty(item.getQty())
+                        .unitPrice(product.getPrice())
+                        .build();
+                orderItemRepository.save(orderItem);
+            }
+
+            Payment payment = Payment.builder()
+                    .order(order)
+                    .amount(total)
+                    .paymentMethod(request.getPaymentMethod().name())
+                    .status(PaymentStatus.PENDING)
+                    .paidAt(null)
+                    .build();
+            paymentRepository.save(payment);
+
+            if (request.getPaymentMethod() == PaymentMethod.COD) {
+                order.setStatus(OrderStatus.COMPLETED);
+                orderRepository.save(order);
+
+                payment.setStatus(PaymentStatus.SUCCESS);
+                payment.setPaidAt(LocalDateTime.now());
+                paymentRepository.save(payment);
+                return "";
+            } else if (request.getPaymentMethod() == PaymentMethod.MOMO) {
+                // Xử lý MOMO ở đây (hiện để trống)
+                return "";
+            } else if (request.getPaymentMethod() == PaymentMethod.VNPAY) {
+                return vnPayService.createPaymentUrl(order.getId(), total, ipAddress);
+            } else {
+                throw new RuntimeException("Unsupported payment method");
+            }
+        } else {
+            throw new RuntimeException("Có 2 tham số orderType là SINGLE VÀ GROUP. Nếu mua hàng trực tiếp thì truyền SINGLE, nếu mua nhiều sản phẩm từ giỏ hàng (CartItem) thì truyền GROUP");
+        }
+    }
+
+    @Transactional
+    public void updatePaymentStatusAfterSuccess(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new RuntimeException("Payment not found for order id: " + orderId));
+
+        order.setStatus(OrderStatus.COMPLETED);
+        orderRepository.save(order);
+
+        payment.setStatus(PaymentStatus.SUCCESS);
+        payment.setPaidAt(LocalDateTime.now());
+        paymentRepository.save(payment);
+
+        logger.info("Updated order #{} status to COMPLETED and payment SUCCESS", orderId);
+    }
 }

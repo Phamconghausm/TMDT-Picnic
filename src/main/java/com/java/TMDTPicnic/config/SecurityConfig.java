@@ -37,7 +37,8 @@ public class SecurityConfig {
 //            "/api/cart/**" // TẤT CẢ method (GET/POST/PUT/DELETE) với /api/cart/** đều PUBLIC
             "/api/shared-carts",
             "/api/addresses",
-            "/api/group-buy"
+            "/api/group-buy",
+            "/api/orders/vnpay-return"
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {

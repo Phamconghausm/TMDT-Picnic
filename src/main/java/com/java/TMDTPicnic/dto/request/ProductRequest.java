@@ -15,5 +15,8 @@ public class ProductRequest {
     private String unit;
     private Boolean isActive;
     private Long categoryId;
+    private Boolean isFeatured;
+    private BigDecimal discountRate;
+
 //    private List<ProductImageRequest> images;
 }

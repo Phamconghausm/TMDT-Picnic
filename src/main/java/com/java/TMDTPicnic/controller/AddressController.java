@@ -77,22 +77,31 @@ public class AddressController {
         );
     }
 
-    // === UPDATE ADDRESS (ADMIN only) ===
+    // === UPDATE ADDRESS (Chỉ chủ sở hữu mới được cập nhật) ===
     @PutMapping("/{id}")
-    @Operation(summary = "Cập nhật thông tin địa chỉ (Admin)")
+    @Operation(summary = "Cập nhật thông tin địa chỉ (Chỉ chủ sở hữu)")
     public ResponseEntity<ApiResponse<AddressResponse>> update(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long id,
             @RequestBody AddressRequest request
     ) {
-        if (!isAdmin(jwt)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        Long currentUserId = getCurrentUserId(jwt);
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.<AddressResponse>builder()
-                            .message("Chỉ Admin mới được phép cập nhật địa chỉ")
+                            .message("Không xác định được người dùng")
                             .build());
         }
 
-        AddressResponse response = addressService.updateAddress(id, request);
+        // Chỉ cho phép user cập nhật địa chỉ của chính mình (không cho admin cập nhật địa chỉ của user khác)
+        AddressResponse response = addressService.updateAddressIfOwnedByUser(id, currentUserId, request);
+        if (response == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.<AddressResponse>builder()
+                            .message("Bạn không có quyền cập nhật địa chỉ này")
+                            .build());
+        }
+
         return ResponseEntity.ok(
                 ApiResponse.<AddressResponse>builder()
                         .message("Cập nhật địa chỉ thành công")
