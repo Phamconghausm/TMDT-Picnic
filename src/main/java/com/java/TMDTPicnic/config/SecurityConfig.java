@@ -50,6 +50,7 @@ public class SecurityConfig {
     private static final String[] ADMIN_ENDPOINTS = {
             "/api/products/**",
             "/api/categories/**",
+            "/api/users/**",
             "/api/group-buy/campaigns/**"
     };
     private static final String[] AUTH_REQUIRED_ENDPOINTS = {

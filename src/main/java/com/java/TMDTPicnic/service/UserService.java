@@ -69,6 +69,7 @@ public class UserService {
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .role(user.getRole().name())
+                .isActive(user.getIsActive())
                 .addresses(addressResponses)
 //                .avatar(user.getAvatar())
                 .build();
@@ -81,19 +82,19 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public boolean hideUserById(Long id) {
+    public boolean blockUserById(Long id) {
         return userRepository.findById(id)
                 .map(user -> {
-                    user.setIsActive(true);   // set flag
+                    user.setIsActive(false);   // set flag
                     userRepository.save(user);
                     return true;
                 })
                 .orElse(false);  // nếu không tìm thấy thì false
     }
-    public boolean unhideUserById(Long id) {
+    public boolean unblockUserById(Long id) {
         return userRepository.findById(id)
                 .map(user -> {
-                    user.setIsActive(false);  // bật lại user
+                    user.setIsActive(true);  // bật lại user
                     userRepository.save(user);
                     return true;
                 })
