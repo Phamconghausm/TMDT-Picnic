@@ -72,10 +72,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // ===== ORDER STATUS =====
     @Query("""
         SELECT new com.java.TMDTPicnic.dto.response.OrderStatusResponse(
-            SUM(CASE WHEN o.status = 'NEW' THEN 1 ELSE 0 END),
-            SUM(CASE WHEN o.status = 'PROCESSING' THEN 1 ELSE 0 END),
-            SUM(CASE WHEN o.status = 'COMPLETED' THEN 1 ELSE 0 END),
-            SUM(CASE WHEN o.status = 'CANCELLED' THEN 1 ELSE 0 END)
+            SUM(CASE WHEN o.status = 'COMPLETED' THEN 1 ELSE 0 END)
         )
         FROM Order o
     """)
