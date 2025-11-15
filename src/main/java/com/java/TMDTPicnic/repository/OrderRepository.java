@@ -5,7 +5,9 @@ import com.java.TMDTPicnic.entity.Order;
 import com.java.TMDTPicnic.entity.SharedCart;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,59 +25,49 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Long completedOrders();
 
     // ===== REVENUE BY DAY =====
-    @Query("""
-        SELECT new com.java.TMDTPicnic.dto.response.RevenueByDayResponse(
-            DATE(order.createdAt),
-            SUM(order.totalAmount)
-        )
-        FROM Order order
-        GROUP BY DATE(order.createdAt)
-        ORDER BY DATE(order.createdAt)
-    """)
-    List<RevenueByDayResponse> getRevenueByDay();
+    @Query(value = """
+        SELECT 
+            DATE(created_at) as date,
+            COALESCE(SUM(total_amount), 0) as revenue
+        FROM orders
+        GROUP BY DATE(created_at)
+        ORDER BY DATE(created_at)
+    """, nativeQuery = true)
+    List<Object[]> getRevenueByDayRaw();
 
     // ===== REVENUE BY MONTH =====
-    @Query("""
-    SELECT new com.java.TMDTPicnic.dto.response.RevenueByMonthResponse(
-        CONCAT(
-            YEAR(order.createdAt),\s
-            '-',
-            CASE\s
-                WHEN MONTH(o.createdAt) < 10 THEN CONCAT('0', MONTH(order.createdAt))
-                ELSE CONCAT('', MONTH(order.createdAt))
-            END
-        ),
-        SUM(order.totalAmount)
-    )
-    FROM Order order
-    GROUP BY YEAR(order.createdAt), MONTH(order.createdAt)
-    ORDER BY YEAR(order.createdAt), MONTH(order.createdAt)
-""")
-    List<RevenueByMonthResponse> getRevenueByMonth();
+    @Query(value = """
+        SELECT 
+            STR_TO_DATE(CONCAT(YEAR(created_at), '-', LPAD(MONTH(created_at), 2, '0'), '-01'), '%Y-%m-%d') as month,
+            COALESCE(SUM(total_amount), 0) as revenue
+        FROM orders
+        GROUP BY month
+        ORDER BY month
+        """, nativeQuery = true)
+    List<Object[]> getRevenueByMonthRaw();
+
 
     // ===== ORDERS BY DAY =====
-    @Query("""
-        SELECT new com.java.TMDTPicnic.dto.response.OrdersByDayResponse(
-            DATE(order.createdAt),
-            COUNT(order)
-        )
-        FROM Order order
-        GROUP BY DATE(order.createdAt)
-        ORDER BY DATE(order.createdAt)
-    """)
-    List<OrdersByDayResponse> getOrdersByDay();
+    @Query(value = """
+        SELECT 
+            DATE(created_at) as date,
+            COUNT(*) as orders
+        FROM orders
+        GROUP BY DATE(created_at)
+        ORDER BY DATE(created_at)
+    """, nativeQuery = true)
+    List<Object[]> getOrdersByDayRaw();
 
     // ===== ORDERS BY MONTH =====
-    @Query("""
-        SELECT new com.java.TMDTPicnic.dto.response.OrdersByMonthResponse(
-            FUNCTION('DATE_FORMAT', order.createdAt, '%Y-%m'),
-            COUNT(order)
-        )
-        FROM Order order
-        GROUP BY FUNCTION('DATE_FORMAT', order.createdAt, '%Y-%m')
-        ORDER BY FUNCTION('DATE_FORMAT', order.createdAt, '%Y-%m')
-    """)
-    List<OrdersByMonthResponse> getOrdersByMonth();
+    @Query(value = """
+        SELECT 
+            DATE_FORMAT(created_at, '%Y-%m') as month,
+            COUNT(*) as orders
+        FROM orders
+        GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+        ORDER BY DATE_FORMAT(created_at, '%Y-%m')
+    """, nativeQuery = true)
+    List<Object[]> getOrdersByMonthRaw();
 
     // ===== ORDER STATUS =====
     @Query("""

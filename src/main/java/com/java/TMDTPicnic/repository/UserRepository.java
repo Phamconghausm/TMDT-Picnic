@@ -40,16 +40,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countUsersCreatedSince(@Param("fromDate") LocalDateTime fromDate);
 
     // Thống kê số user mới mỗi ngày (có thể tính returningUser nếu có dữ liệu)
-    @Query("""
-    SELECT new com.java.TMDTPicnic.dto.response.UserStatsByDayResponse(
-        DATE(u.createdAt),
-        COUNT(u),
-        0L
-    )
-    FROM User u
-    GROUP BY DATE(u.createdAt)
-    ORDER BY DATE(u.createdAt)
-    """)
-    List<UserStatsByDayResponse> getUserStatsByDay();
+    @Query(value = """
+        SELECT 
+            DATE(created_at) as date,
+            COUNT(*) as newUsers,
+            0 as returningUsers
+        FROM users
+        GROUP BY DATE(created_at)
+        ORDER BY DATE(created_at)
+    """, nativeQuery = true)
+    List<Object[]> getUserStatsByDayRaw();
 
 }
