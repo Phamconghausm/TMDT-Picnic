@@ -24,14 +24,18 @@ public class Order {
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
 
-    private String orderType; // SINGLE or GROUP (string for simplicity)
+    private String orderType; // SINGLE, GROUP, or SHARED_CART (string for simplicity)
 
     @ManyToOne
     @JoinColumn(name = "coupon_id")
     private Coupon coupon;
 
+    @ManyToOne
+    @JoinColumn(name = "shared_cart_id")
+    private SharedCart sharedCart; // Link to shared cart if orderType is SHARED_CART
+
     private String vnpTxnRef;
-    
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 }

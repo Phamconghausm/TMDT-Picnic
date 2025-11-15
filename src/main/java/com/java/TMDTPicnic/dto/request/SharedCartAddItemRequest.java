@@ -1,8 +1,5 @@
 package com.java.TMDTPicnic.dto.request;
 
-import com.java.TMDTPicnic.entity.Product;
-import com.java.TMDTPicnic.entity.SharedCart;
-import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Data;
 
@@ -16,4 +13,28 @@ public class SharedCartAddItemRequest {
     private Long addByUserId;
     private Integer quantity;
     private BigDecimal priceAtAdd;
+
+    // Gom các request nhỏ vào đây
+    @Data
+    @Builder
+    public static class UpdateQuantityRequest {
+        private Long sharedCartId;
+        private Long productId;
+        private Integer quantity;
+    }
+
+    @Data
+    @Builder
+    public static class RemoveItemRequest {
+        private Long sharedCartId;
+        private Long productId;
+    }
+
+    @Data
+    @Builder
+    public static class UpdateContributionRequest {
+        private Long sharedCartId;
+        private Long userId;
+        private BigDecimal contributionAmount;
+    }
 }

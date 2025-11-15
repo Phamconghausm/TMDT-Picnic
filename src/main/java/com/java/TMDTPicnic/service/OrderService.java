@@ -5,10 +5,12 @@ import com.java.TMDTPicnic.entity.*;
 import com.java.TMDTPicnic.enums.OrderStatus;
 import com.java.TMDTPicnic.enums.PaymentMethod;
 import com.java.TMDTPicnic.enums.PaymentStatus;
+import com.java.TMDTPicnic.enums.SharedCartStatus;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.java.TMDTPicnic.repository.*;
+import com.java.TMDTPicnic.service.NotificationService;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -30,6 +32,10 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final CartItemRepository cartItemRepository;
     private final VNPayService vnPayService;
+    private final SharedCartRepository sharedCartRepository;
+    private final SharedCartItemRepository sharedCartItemRepository;
+    private final SharedCartParticipantRepository sharedCartParticipantRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public String createOrder(Long userId, CheckoutRequest request, String ipAddress) throws UnsupportedEncodingException {
@@ -192,6 +198,42 @@ public class OrderService {
         payment.setStatus(PaymentStatus.SUCCESS);
         payment.setPaidAt(LocalDateTime.now());
         paymentRepository.save(payment);
+
+        // Nếu là shared cart order, đóng shared cart và xóa items
+        if ("SHARED_CART".equalsIgnoreCase(order.getOrderType()) && order.getSharedCart() != null) {
+            SharedCart sharedCart = order.getSharedCart();
+            sharedCart.setStatus(SharedCartStatus.COMPLETED);
+            sharedCartRepository.save(sharedCart);
+
+            // Xóa tất cả items trong shared cart
+            List<SharedCartItem> cartItems = sharedCartItemRepository.findBySharedCartId(sharedCart.getId());
+            sharedCartItemRepository.deleteAll(cartItems);
+
+            // Tạo notification cho tất cả participants (trừ người thanh toán)
+            User paidByUser = order.getUser();
+            List<SharedCartParticipant> participants = sharedCartParticipantRepository.findBySharedCartId(sharedCart.getId());
+            for (SharedCartParticipant participant : participants) {
+                if (!participant.getUser().getId().equals(paidByUser.getId())) {
+                    notificationService.createSharedCartCheckoutNotification(
+                            participant.getUser(),
+                            sharedCart,
+                            paidByUser,
+                            payment.getAmount(),
+                            payment.getPaymentMethod()
+                    );
+                }
+            }
+            // Tạo notification cho người thanh toán
+            notificationService.createSharedCartCheckoutNotification(
+                    paidByUser,
+                    sharedCart,
+                    paidByUser,
+                    payment.getAmount(),
+                    payment.getPaymentMethod()
+            );
+
+            logger.info("Closed shared cart #{} and removed all items after successful payment", sharedCart.getId());
+        }
 
         logger.info("Updated order #{} status to COMPLETED and payment SUCCESS", orderId);
     }
