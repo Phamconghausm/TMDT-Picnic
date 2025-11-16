@@ -28,7 +28,7 @@ public class CategoryController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestBody CategoryRequest request) {
 
-        if (!jwt.getClaimAsString("role").equals("ADMIN")) {
+        if (!jwt.getClaimAsString("scope").equals("ROLE_ADMIN")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.<CategoryResponse>builder()
                             .message("Không có quyền thực hiện")
@@ -76,7 +76,7 @@ public class CategoryController {
             @PathVariable Long id,
             @RequestBody CategoryRequest request) {
 
-        if (!jwt.getClaimAsString("role").equals("ADMIN")) {
+        if (!jwt.getClaimAsString("scope").equals("ROLE_ADMIN")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.<CategoryResponse>builder()
                             .message("Không có quyền thực hiện")
@@ -99,7 +99,7 @@ public class CategoryController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long id) {
 
-        if (!jwt.getClaimAsString("role").equals("ADMIN")) {
+        if (!jwt.getClaimAsString("scope").equals("ROLE_ADMIN")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.<Void>builder()
                             .message("Không có quyền thực hiện")

@@ -27,7 +27,10 @@ public class AddressController {
 
     private Long getCurrentUserId(Jwt jwt) {
         // JWT claim “userId” chứa id người dùng khi đăng nhập
+        if (jwt == null) return null;
         Object idClaim = jwt.getClaim("userId");
+        if (idClaim == null) idClaim = jwt.getClaim("id");
+        if (idClaim == null) idClaim = jwt.getSubject(); // "sub"
         return idClaim != null ? Long.valueOf(idClaim.toString()) : null;
     }
 
@@ -36,20 +39,36 @@ public class AddressController {
     @Operation(summary = "Tạo địa chỉ mới cho người dùng")
     public ResponseEntity<ApiResponse<AddressResponse>> create(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestParam Long userId,
+            @RequestParam(required = false) Long userId,
             @RequestBody AddressRequest request
     ) {
         Long currentUserId = getCurrentUserId(jwt);
 
-        // Nếu không phải admin và userId khác user hiện tại -> cấm
-        if (!isAdmin(jwt) && !userId.equals(currentUserId)) {
+        if (currentUserId == null && userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.<AddressResponse>builder()
+                            .message("Không xác định được người dùng")
+                            .build());
+        }
+
+        boolean admin = isAdmin(jwt);
+        Long targetUserId = admin ? (userId != null ? userId : currentUserId) : currentUserId;
+
+        if (!admin && targetUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.<AddressResponse>builder()
+                            .message("Không xác định được người dùng")
+                            .build());
+        }
+
+        if (!admin && !targetUserId.equals(currentUserId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.<AddressResponse>builder()
                             .message("Bạn không có quyền tạo địa chỉ cho người khác")
                             .build());
         }
 
-        AddressResponse response = addressService.createAddress(userId, request);
+        AddressResponse response = addressService.createAddress(targetUserId, request);
         return ResponseEntity.ok(
                 ApiResponse.<AddressResponse>builder()
                         .message("Tạo địa chỉ thành công")
@@ -58,22 +77,31 @@ public class AddressController {
         );
     }
 
-    // === UPDATE ADDRESS (ADMIN only) ===
+    // === UPDATE ADDRESS (Chỉ chủ sở hữu mới được cập nhật) ===
     @PutMapping("/{id}")
-    @Operation(summary = "Cập nhật thông tin địa chỉ (Admin)")
+    @Operation(summary = "Cập nhật thông tin địa chỉ (Chỉ chủ sở hữu)")
     public ResponseEntity<ApiResponse<AddressResponse>> update(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long id,
             @RequestBody AddressRequest request
     ) {
-        if (!isAdmin(jwt)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        Long currentUserId = getCurrentUserId(jwt);
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.<AddressResponse>builder()
-                            .message("Chỉ Admin mới được phép cập nhật địa chỉ")
+                            .message("Không xác định được người dùng")
                             .build());
         }
 
-        AddressResponse response = addressService.updateAddress(id, request);
+        // Chỉ cho phép user cập nhật địa chỉ của chính mình (không cho admin cập nhật địa chỉ của user khác)
+        AddressResponse response = addressService.updateAddressIfOwnedByUser(id, currentUserId, request);
+        if (response == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.<AddressResponse>builder()
+                            .message("Bạn không có quyền cập nhật địa chỉ này")
+                            .build());
+        }
+
         return ResponseEntity.ok(
                 ApiResponse.<AddressResponse>builder()
                         .message("Cập nhật địa chỉ thành công")
@@ -84,19 +112,35 @@ public class AddressController {
 
     // === DELETE ADDRESS (ADMIN only) ===
     @DeleteMapping("/{id}")
-    @Operation(summary = "Xóa địa chỉ theo ID (Admin)")
+    @Operation(summary = "Xóa địa chỉ theo ID (Admin hoặc chủ sở hữu)")
     public ResponseEntity<ApiResponse<Void>> delete(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long id
     ) {
-        if (!isAdmin(jwt)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        // Admin: được xoá mọi địa chỉ
+        if (isAdmin(jwt)) {
+            addressService.deleteAddress(id);
+            return ResponseEntity.ok(
+                    ApiResponse.<Void>builder()
+                            .message("Xóa địa chỉ thành công")
+                            .build()
+            );
+        }
+        // User thường: chỉ được xoá địa chỉ của chính mình
+        Long currentUserId = getCurrentUserId(jwt);
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.<Void>builder()
-                            .message("Chỉ Admin mới được phép xóa địa chỉ")
+                            .message("Không xác định được người dùng")
                             .build());
         }
-
-        addressService.deleteAddress(id);
+        boolean deleted = addressService.deleteAddressIfOwnedByUser(id, currentUserId);
+        if (!deleted) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.<Void>builder()
+                            .message("Bạn không có quyền xoá địa chỉ này")
+                            .build());
+        }
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
                         .message("Xóa địa chỉ thành công")
@@ -109,24 +153,72 @@ public class AddressController {
     @Operation(summary = "Lấy danh sách địa chỉ của người dùng")
     public ResponseEntity<ApiResponse<List<AddressResponse>>> getUserAddresses(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestParam Long userId
+            @RequestParam(required = false) Long userId
     ) {
         Long currentUserId = getCurrentUserId(jwt);
 
-        // Nếu không phải admin và userId khác người hiện tại -> cấm
-        if (!isAdmin(jwt) && !userId.equals(currentUserId)) {
+        if (currentUserId == null && userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.<List<AddressResponse>>builder()
+                            .message("Không xác định được người dùng")
+                            .build());
+        }
+
+        boolean admin = isAdmin(jwt);
+        Long targetUserId = admin ? (userId != null ? userId : currentUserId) : currentUserId;
+
+        if (!admin && targetUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.<List<AddressResponse>>builder()
+                            .message("Không xác định được người dùng")
+                            .build());
+        }
+
+        if (!admin && !targetUserId.equals(currentUserId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.<List<AddressResponse>>builder()
                             .message("Bạn không có quyền xem địa chỉ của người khác")
                             .build());
         }
 
-        List<AddressResponse> addresses = addressService.getUserAddresses(userId);
+        List<AddressResponse> addresses = addressService.getUserAddresses(targetUserId);
         return ResponseEntity.ok(
                 ApiResponse.<List<AddressResponse>>builder()
                         .message("Lấy danh sách địa chỉ thành công")
                         .data(addresses)
                         .build()
         );
+    }
+
+    // === SET DEFAULT ADDRESS (Admin hoặc chủ sở hữu) ===
+    @PatchMapping("/{id}/default")
+    @Operation(summary = "Đặt địa chỉ mặc định")
+    public ResponseEntity<ApiResponse<AddressResponse>> setDefault(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long id
+    ) {
+        Long currentUserId = getCurrentUserId(jwt);
+        boolean admin = isAdmin(jwt);
+        if (!admin && currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.<AddressResponse>builder()
+                            .message("Không xác định được người dùng")
+                            .build());
+        }
+
+        try {
+            AddressResponse resp = addressService.setDefaultAddress(id, currentUserId, admin);
+            return ResponseEntity.ok(
+                    ApiResponse.<AddressResponse>builder()
+                            .message("Cập nhật địa chỉ mặc định thành công")
+                            .data(resp)
+                            .build()
+            );
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.<AddressResponse>builder()
+                            .message(ex.getMessage())
+                            .build());
+        }
     }
 }

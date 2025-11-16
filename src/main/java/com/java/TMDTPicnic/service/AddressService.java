@@ -79,6 +79,50 @@ public class AddressService {
         addressRepository.deleteById(id);
     }
 
+    // 🔴 Xóa địa chỉ nếu thuộc về user (trả về true nếu xóa được)
+    public boolean deleteAddressIfOwnedByUser(Long id, Long userId) {
+        Address address = addressRepository.findById(id).orElse(null);
+        if (address == null) {
+            return false;
+        }
+        if (address.getUser() == null || !address.getUser().getId().equals(userId)) {
+            return false;
+        }
+        addressRepository.delete(address);
+        return true;
+    }
+
+    // 🟡 Cập nhật địa chỉ nếu thuộc về user (trả về AddressResponse nếu thành công, null nếu không có quyền)
+    @Transactional
+    public AddressResponse updateAddressIfOwnedByUser(Long id, Long userId, AddressRequest request) {
+        Address address = addressRepository.findById(id).orElse(null);
+        if (address == null) {
+            return null;
+        }
+        if (address.getUser() == null || !address.getUser().getId().equals(userId)) {
+            return null;
+        }
+
+        Long addressUserId = address.getUser().getId();
+
+        // Nếu cập nhật thành mặc định → bỏ mặc định các địa chỉ khác
+        if (Boolean.TRUE.equals(request.getIsDefault())) {
+            addressRepository.updateAllIsDefaultFalse(addressUserId);
+        }
+
+        address.setLabel(request.getLabel());
+        address.setRecipientName(request.getRecipientName());
+        address.setPhone(request.getPhone());
+        address.setProvince(request.getProvince());
+        address.setDistrict(request.getDistrict());
+        address.setWard(request.getWard());
+        address.setDetail(request.getDetail());
+        address.setIsDefault(request.getIsDefault() != null ? request.getIsDefault() : false);
+
+        addressRepository.save(address);
+        return toResponse(address);
+    }
+
     // 🟣 Lấy danh sách địa chỉ của user
     public List<AddressResponse> getUserAddresses(Long userId) {
         User user = userRepository.findById(userId).orElseThrow();
@@ -86,6 +130,29 @@ public class AddressService {
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    // ✅ Đặt địa chỉ mặc định (kiểm tra sở hữu)
+    @Transactional
+    public AddressResponse setDefaultAddress(Long addressId, Long currentUserId, boolean admin) {
+        Address address = addressRepository.findById(addressId)
+                .orElseThrow(() -> new RuntimeException("Address not found"));
+
+        Long ownerId = address.getUser() != null ? address.getUser().getId() : null;
+        if (!admin) {
+            if (ownerId == null || !ownerId.equals(currentUserId)) {
+                throw new RuntimeException("Forbidden: not owner of address");
+            }
+        }
+
+        // Bỏ mặc định các địa chỉ khác của user
+        if (ownerId != null) {
+            addressRepository.updateAllIsDefaultFalse(ownerId);
+        }
+
+        address.setIsDefault(true);
+        addressRepository.save(address);
+        return toResponse(address);
     }
 
     // 🧩 Hàm chuyển từ entity → response

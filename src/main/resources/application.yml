@@ -22,7 +22,14 @@ spring:
     hibernate:
       ddl-auto: update
       physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+      properties:
+        hibernate:
+          dialect: org.hibernate.dialect.MySQL8Dialect
 
+  servlet:
+    multipart:
+      max-file-size: 10MB        # tăng tối đa dung lượng mỗi file upload
+      max-request-size: 20MB     # tăng tối đa dung lượng tổng request
 jwt:
   signerKey: ${JWT_SECRET}
   valid_duration: 360000
@@ -41,3 +48,10 @@ cloudinary:
   api-secret: ${CLOUDINARY_API_SECRET}
 profiles:
   active: ${SPRING_PROFILES_ACTIVE:dev}
+
+vnpay:
+  pay-url: ${PAY_URL}
+  return-url: ${RETURN_URL}
+  tmn-code: ${TMN_CODE}
+  secret-key: ${SECRET_KEY}
+  api-url: ${API_URL}

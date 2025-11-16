@@ -22,6 +22,7 @@ public class ProductResponse {
     private String categoryName;
     private List<ProductImageResponse> images;
     private LocalDateTime createdAt;
+    private LocalDateTime updateAt;
     private BigDecimal discountRate;
     private Boolean isFeatured;
     private Integer soldQuantity;

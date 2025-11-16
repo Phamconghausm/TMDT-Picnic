@@ -69,5 +69,41 @@ public class UserController {
         );
     }
 
+    // Ẩn user
+    @PutMapping("/{id}/block")
+    public ResponseEntity<ApiResponse<Void>> hideUser(@PathVariable Long id) {
+        boolean result = userService.blockUserById(id);
+        if (result) {
+            return ResponseEntity.ok(
+                    ApiResponse.<Void>builder()
+                            .message("User " + id + " đã bị chặn.")
+                            .build()
+            );
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.<Void>builder()
+                            .message("User không tồn tại.")
+                            .build());
+        }
+    }
+
+    // Hiện lại user
+    @PutMapping("/{id}/unblock")
+    public ResponseEntity<ApiResponse<Void>> unhideUser(@PathVariable Long id) {
+        boolean result = userService.unblockUserById(id);
+        if (result) {
+            return ResponseEntity.ok(
+                    ApiResponse.<Void>builder()
+                            .message("User " + id + " đã được bỏ chặn.")
+                            .build()
+            );
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.<Void>builder()
+                            .message("User không tồn tại.")
+                            .build());
+        }
+    }
+
 }
 

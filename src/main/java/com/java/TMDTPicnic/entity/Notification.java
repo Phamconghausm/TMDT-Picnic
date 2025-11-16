@@ -28,4 +28,9 @@ public class Notification {
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
+
+    private String actionType; // "SHARED_CART_INVITATION", etc.
+
+    @Column(columnDefinition = "TEXT")
+    private String metadata; // JSON string: {"sharedCartId": 1, "sharedCartTitle": "...", "inviterName": "...", "inviterId": 1}
 }

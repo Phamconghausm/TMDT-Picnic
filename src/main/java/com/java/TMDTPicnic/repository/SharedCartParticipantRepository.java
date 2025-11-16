@@ -10,4 +10,5 @@ import java.util.List;
 public interface SharedCartParticipantRepository extends JpaRepository<SharedCartParticipant, Long> {
     List<SharedCartParticipant> findBySharedCartId(Long sharedCartId);
     boolean existsBySharedCartAndUser(SharedCart sharedCart, User user);
+    java.util.Optional<SharedCartParticipant> findBySharedCartAndUser(SharedCart sharedCart, User user);
 }

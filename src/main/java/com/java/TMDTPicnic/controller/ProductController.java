@@ -2,11 +2,13 @@ package com.java.TMDTPicnic.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.java.TMDTPicnic.dto.request.ProductRequest;
+import com.java.TMDTPicnic.dto.response.ProductPageResponse;
 import com.java.TMDTPicnic.dto.response.ProductResponse;
 import com.java.TMDTPicnic.dto.response.ApiResponse;
 import com.java.TMDTPicnic.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -63,15 +65,29 @@ public class ProductController {
                         .build()
         );
     }
-    // === LẤY DANH SÁCH SẢN PHẨM (KHÔNG PHÂN TRANG) ===
+    // === LẤY DANH SÁCH SẢN PHẨM (Phân trang) ===
     @GetMapping("/all")
-    @Operation(summary = "Lấy tất cả sản phẩm (không phân trang)")
-    public ResponseEntity<ApiResponse<List<ProductResponse>>> getAllProducts() {
-        List<ProductResponse> products = productService.getAllProducts();
+    @Operation(summary = "Lấy tất cả sản phẩm (phân trang, rút gọn metadata)")
+    public ResponseEntity<ApiResponse<ProductPageResponse>> getAllProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Page<ProductResponse> productsPage = productService.getAllProducts(page, size);
+
+        ProductPageResponse response = new ProductPageResponse(
+                productsPage.getContent(),
+                productsPage.getNumber(),
+                productsPage.getSize(),
+                productsPage.getTotalElements(),
+                productsPage.getTotalPages(),
+                productsPage.isFirst(),
+                productsPage.isLast()
+        );
+
         return ResponseEntity.ok(
-                ApiResponse.<List<ProductResponse>>builder()
+                ApiResponse.<ProductPageResponse>builder()
                         .message("Lấy tất cả sản phẩm thành công")
-                        .data(products)
+                        .data(response)
                         .build()
         );
     }
@@ -99,19 +115,35 @@ public class ProductController {
         );
     }
     // Lấy sản phẩm theo categoryId
-    @Operation(summary = "Lấy chi tiết sản phẩm theo Category ID")
+    @Operation(summary = "Lấy danh sách sản phẩm theo Category ID (phân trang, rút gọn metadata)")
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<ApiResponse<List<ProductResponse>>> getProductsByCategory(@PathVariable Long categoryId) {
-        List<ProductResponse> products = productService.getProductsByCategoryId(categoryId);
+    public ResponseEntity<ApiResponse<ProductPageResponse>> getProductsByCategory(
+            @PathVariable Long categoryId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Page<ProductResponse> productsPage = productService.getProductsByCategoryId(categoryId, page, size);
+
+        ProductPageResponse response = new ProductPageResponse(
+                productsPage.getContent(),
+                productsPage.getNumber(),
+                productsPage.getSize(),
+                productsPage.getTotalElements(),
+                productsPage.getTotalPages(),
+                productsPage.isFirst(),
+                productsPage.isLast()
+        );
+
         return ResponseEntity.ok(
-                ApiResponse.<List<ProductResponse>>builder()
+                ApiResponse.<ProductPageResponse>builder()
                         .message("Lấy danh sách sản phẩm theo thể loại thành công")
-                        .data(products)
+                        .data(response)
                         .build()
         );
     }
+
     // === LẤY CHI TIẾT SẢN PHẨM THEO ID ===
-    @GetMapping("/{id}")
+    @GetMapping("/detail/{id}")
     @Operation(summary = "Lấy chi tiết sản phẩm theo ID")
     public ResponseEntity<ApiResponse<ProductResponse>> getProductById(@PathVariable Long id) {
         ProductResponse product = productService.getProductById(id);
@@ -169,6 +201,55 @@ public class ProductController {
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
                         .message("Xoá sản phẩm thành công")
+                        .build()
+        );
+    }
+    // =============================
+    // ẨN SẢN PHẨM
+    // =============================
+    @PatchMapping("/{id}/hide")
+    @Operation(summary = "ROLE-ADMIN Ẩn sản phẩm theo id")
+    public ResponseEntity<ApiResponse<ProductResponse>> hideProduct(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long id
+    ) {
+        if (!"ROLE_ADMIN".equals(jwt.getClaimAsString("scope"))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.<ProductResponse>builder()
+                            .message("Không có quyền thực hiện")
+                            .build());
+        }
+
+        ProductResponse response = productService.hideProduct(id);
+        return ResponseEntity.ok(
+                ApiResponse.<ProductResponse>builder()
+                        .message("Ẩn sản phẩm thành công")
+                        .data(response)
+                        .build()
+        );
+    }
+
+    // =============================
+    // HIỆN SẢN PHẨM
+    // =============================
+    @PatchMapping("/{id}/unhide")
+    @Operation(summary = "ROLE-ADMIN Hiện lại sản phẩm theo id")
+    public ResponseEntity<ApiResponse<ProductResponse>> unhideProduct(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long id
+    ) {
+        if (!"ROLE_ADMIN".equals(jwt.getClaimAsString("scope"))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.<ProductResponse>builder()
+                            .message("Không có quyền thực hiện")
+                            .build());
+        }
+
+        ProductResponse response = productService.unhideProduct(id);
+        return ResponseEntity.ok(
+                ApiResponse.<ProductResponse>builder()
+                        .message("Hiện sản phẩm thành công")
+                        .data(response)
                         .build()
         );
     }

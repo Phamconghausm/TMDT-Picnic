@@ -38,7 +38,8 @@ public class Product {
     private BigDecimal discountRate;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
-
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime updateAt;
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
