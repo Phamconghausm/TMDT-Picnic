@@ -1,5 +1,6 @@
 package com.java.TMDTPicnic.service;
 
+import com.java.TMDTPicnic.dto.request.ApplyCouponRequest;
 import com.java.TMDTPicnic.dto.request.CheckoutRequest;
 import com.java.TMDTPicnic.dto.request.OrderStatusUpdateRequest;
 import com.java.TMDTPicnic.dto.response.OrderHistoryResponse;
@@ -44,6 +45,9 @@ public class OrderService {
     private final SharedCartItemRepository sharedCartItemRepository;
     private final SharedCartParticipantRepository sharedCartParticipantRepository;
     private final NotificationService notificationService;
+    private final CouponService couponService;
+    private String couponCode;
+
 
     @Transactional
     public String createOrder(Long userId, CheckoutRequest request, String ipAddress) throws UnsupportedEncodingException {
@@ -73,10 +77,20 @@ public class OrderService {
                 }
                 total = total.add(product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
             }
+                BigDecimal finalTotal = total;
+                if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+                    var applyRequest = new ApplyCouponRequest(request.getCouponCode(), total);
+                    var applyResult = couponService.applyCoupon(applyRequest);
+                    if (!applyResult.isValid()) {
+                        throw new RuntimeException(applyResult.getMessage());
+                    }
+                    finalTotal = applyResult.getFinalTotal(); // finalTotal = total * giảm giá (nếu có)
+                }
+
 
             Order order = Order.builder()
                     .user(user)
-                    .totalAmount(total)
+                    .totalAmount(finalTotal)
                     .status(OrderStatus.PENDING)
                     .orderType("GROUP")
                     .createdAt(LocalDateTime.now())
@@ -100,7 +114,7 @@ public class OrderService {
 
             Payment payment = Payment.builder()
                     .order(order)
-                    .amount(total)
+                    .amount(finalTotal)
                     .paymentMethod(request.getPaymentMethod().name())
                     .status(PaymentStatus.PENDING)
                     .paidAt(null)
@@ -121,7 +135,7 @@ public class OrderService {
                 // Xử lý MOMO ở đây (hiện để trống)
                 return "";
             } else if (request.getPaymentMethod() == PaymentMethod.VNPAY) {
-                return vnPayService.createPaymentUrl(order.getId(), total, ipAddress);
+                return vnPayService.createPaymentUrl(order.getId(), finalTotal, ipAddress);
             } else {
                 throw new RuntimeException("Unsupported payment method");
             }
@@ -139,10 +153,20 @@ public class OrderService {
                 }
                 total = total.add(product.getPrice().multiply(BigDecimal.valueOf(item.getQty())));
             }
+            BigDecimal finalTotal = total;
+            if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+                var applyRequest = new ApplyCouponRequest(request.getCouponCode(), total);
+                var applyResult = couponService.applyCoupon(applyRequest);
+                if (!applyResult.isValid()) {
+                    throw new RuntimeException(applyResult.getMessage());
+                }
+                finalTotal = applyResult.getFinalTotal(); // finalTotal = total * giảm giá (nếu có)
+            }
+
 
             Order order = Order.builder()
                     .user(user)
-                    .totalAmount(total)
+                    .totalAmount(finalTotal)
                     .status(OrderStatus.PENDING)
                     .orderType("SINGLE")
                     .createdAt(LocalDateTime.now())
@@ -167,7 +191,7 @@ public class OrderService {
 
             Payment payment = Payment.builder()
                     .order(order)
-                    .amount(total)
+                    .amount(finalTotal)
                     .paymentMethod(request.getPaymentMethod().name())
                     .status(PaymentStatus.PENDING)
                     .paidAt(null)
@@ -186,7 +210,7 @@ public class OrderService {
                 // Xử lý MOMO ở đây (hiện để trống)
                 return "";
             } else if (request.getPaymentMethod() == PaymentMethod.VNPAY) {
-                return vnPayService.createPaymentUrl(order.getId(), total, ipAddress);
+                return vnPayService.createPaymentUrl(order.getId(), finalTotal, ipAddress);
             } else {
                 throw new RuntimeException("Unsupported payment method");
             }
