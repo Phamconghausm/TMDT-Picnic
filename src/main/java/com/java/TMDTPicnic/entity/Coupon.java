@@ -20,4 +20,5 @@ public class Coupon {
     private BigDecimal discountValue; // absolute or percent
     private Boolean isPercent;
     private Integer usageLimit; // total uses
+    private Integer usedCount = 0; // đếm số lượt đã dùng
 }
