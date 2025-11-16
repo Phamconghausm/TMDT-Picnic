@@ -14,4 +14,8 @@ public class ApplyCouponResponse {
     private String message;
     private BigDecimal discountAmount; // số tiền được giảm
     private BigDecimal finalTotal;     // tổng tiền sau khi giảm
+    public boolean isValid() {
+        return valid;
+    }
+
 }

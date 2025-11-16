@@ -38,7 +38,8 @@ public class SecurityConfig {
             "/api/shared-carts",
             "/api/addresses",
             "/api/group-buy",
-            "/api/orders/vnpay-return"
+            "/api/orders/vnpay-return",
+            "/api/coupons"
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {
@@ -52,7 +53,8 @@ public class SecurityConfig {
             "/api/categories/**",
             "/api/users/**",
             "/api/dashboard/**",
-            "/api/group-buy/campaigns/**"
+            "/api/group-buy/campaigns/**",
+            "/api/coupons"
     };
     private static final String[] AUTH_REQUIRED_ENDPOINTS = {
             "/api/addresses/**",

@@ -15,4 +15,5 @@ public class CheckoutRequest {
 
     private String orderType;                        // "SINGLE" hoặc "GROUP"
     private PaymentMethod paymentMethod;             // COD, VNPAY, MOMO
+    private String couponCode;
 }

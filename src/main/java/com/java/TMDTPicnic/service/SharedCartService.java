@@ -33,6 +33,8 @@ public class SharedCartService {
     private final OrderItemRepository orderItemRepository;
     private final PaymentRepository paymentRepository;
     private final VNPayService vnPayService;
+    private final CouponService couponService;
+    private String couponCode;
 
     // 1. Tạo giỏ chia sẻ
     public SharedCartListResponse.CreateResponse createSharedCart(SharedCartCreateRequest request) {
@@ -402,6 +404,16 @@ public class SharedCartService {
             }
             total = total.add(item.getPriceAtAdd().multiply(BigDecimal.valueOf(item.getQuantity())));
         }
+        BigDecimal finalTotal = total;
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+            var applyRequest = new ApplyCouponRequest(request.getCouponCode(), total);
+            var applyResult = couponService.applyCoupon(applyRequest);
+            if (!applyResult.isValid()) {
+                throw new RuntimeException(applyResult.getMessage());
+            }
+            finalTotal = applyResult.getFinalTotal(); // finalTotal = total * giảm giá (nếu có)
+        }
+
 
         // Lấy user (owner)
         User owner = userRepository.findById(userId)
@@ -410,7 +422,7 @@ public class SharedCartService {
         // Tạo Order
         Order order = Order.builder()
                 .user(owner)
-                .totalAmount(total)
+                .totalAmount(finalTotal)
                 .status(OrderStatus.PENDING)
                 .orderType("SHARED_CART")
                 .sharedCart(cart)
@@ -439,7 +451,7 @@ public class SharedCartService {
         // Tạo Payment
         Payment payment = Payment.builder()
                 .order(order)
-                .amount(total)
+                .amount(finalTotal)
                 .paymentMethod(request.getPaymentMethod().name())
                 .status(PaymentStatus.PENDING)
                 .paidAt(null)
@@ -469,7 +481,7 @@ public class SharedCartService {
                             participant.getUser(),
                             cart,
                             owner,
-                            total,
+                            finalTotal,
                             request.getPaymentMethod().name()
                     );
                 }
@@ -479,14 +491,14 @@ public class SharedCartService {
                     owner,
                     cart,
                     owner,
-                    total,
+                    finalTotal,
                     request.getPaymentMethod().name()
             );
 
             return ""; // Không cần URL thanh toán
         } else if (request.getPaymentMethod() == PaymentMethod.VNPAY) {
             // VNPay: Tạo payment URL, sẽ xử lý callback sau
-            return vnPayService.createPaymentUrl(order.getId(), total, ipAddress);
+            return vnPayService.createPaymentUrl(order.getId(), finalTotal, ipAddress);
         } else if (request.getPaymentMethod() == PaymentMethod.MOMO) {
             // MOMO: (hiện để trống, có thể implement sau)
             throw new RuntimeException("MOMO payment method is not yet implemented");

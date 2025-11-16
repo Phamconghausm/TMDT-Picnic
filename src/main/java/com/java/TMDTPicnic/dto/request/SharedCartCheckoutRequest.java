@@ -9,5 +9,6 @@ import lombok.Data;
 public class SharedCartCheckoutRequest {
     private Long sharedCartId;
     private PaymentMethod paymentMethod; // COD, VNPAY, MOMO
+    private String couponCode;
 }
 
