@@ -25,6 +25,9 @@ public class Review {
     @Column(columnDefinition = "text")
     private String comment;
 
+    @Builder.Default
+    private Boolean isHidden = false; // Admin có thể ẩn review
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 }
