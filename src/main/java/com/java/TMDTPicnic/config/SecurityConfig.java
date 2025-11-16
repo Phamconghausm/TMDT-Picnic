@@ -54,7 +54,7 @@ public class SecurityConfig {
             "/api/users/**",
             "/api/dashboard/**",
             "/api/group-buy/campaigns/**",
-            "/api/coupons"
+            "/api/coupons/create"
     };
     private static final String[] AUTH_REQUIRED_ENDPOINTS = {
             "/api/addresses/**",
