@@ -4,6 +4,9 @@ import com.java.TMDTPicnic.dto.response.*;
 import com.java.TMDTPicnic.entity.Order;
 import com.java.TMDTPicnic.entity.SharedCart;
 import com.java.TMDTPicnic.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,7 +17,7 @@ import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findBySharedCartAndOrderType(SharedCart sharedCart, String orderType);
-    
+    Page<Order> findAll(Specification<Order> spec, Pageable pageable);
     // ===== ORDER HISTORY =====
     List<Order> findByUserOrderByCreatedAtDesc(User user);
     List<Order> findByUserAndOrderTypeIsOrderByCreatedAtDesc(User user, String orderType);

@@ -1,13 +1,19 @@
 package com.java.TMDTPicnic.controller;
 
 import com.java.TMDTPicnic.dto.request.CheckoutRequest;
-import com.java.TMDTPicnic.dto.response.ApiResponse;
-import com.java.TMDTPicnic.dto.response.OrderHistoryResponse;
+import com.java.TMDTPicnic.dto.request.OrderStatusUpdateRequest;
+import com.java.TMDTPicnic.dto.response.*;
+import com.java.TMDTPicnic.enums.OrderStatus;
 import com.java.TMDTPicnic.service.OrderService;
 import com.java.TMDTPicnic.service.VNPayService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -105,10 +111,10 @@ public class OrderController {
     @Operation(summary = "Lấy lịch sử đơn hàng cá nhân của user")
     public ResponseEntity<ApiResponse<OrderHistoryResponse>> getPersonalOrderHistory(
             @AuthenticationPrincipal Jwt jwt) {
-        
+
         Long userId = Long.valueOf(jwt.getClaimAsString("sub"));
         OrderHistoryResponse orderHistory = orderService.getPersonalOrderHistory(userId);
-        
+
         return ResponseEntity.ok(
                 ApiResponse.<OrderHistoryResponse>builder()
                         .message("Lấy lịch sử đơn hàng cá nhân thành công")
@@ -124,14 +130,110 @@ public class OrderController {
     @Operation(summary = "Lấy lịch sử đơn hàng từ shared cart của user")
     public ResponseEntity<ApiResponse<OrderHistoryResponse>> getSharedCartOrderHistory(
             @AuthenticationPrincipal Jwt jwt) {
-        
+
         Long userId = Long.valueOf(jwt.getClaimAsString("sub"));
         OrderHistoryResponse orderHistory = orderService.getSharedCartOrderHistory(userId);
-        
+
         return ResponseEntity.ok(
                 ApiResponse.<OrderHistoryResponse>builder()
                         .message("Lấy lịch sử đơn hàng shared cart thành công")
                         .data(orderHistory)
+                        .build()
+        );
+    }
+
+    /**
+     * Admin: Lấy tất cả đơn hàng với pagination và filter
+     */
+    @GetMapping("/admin")
+    @Operation(summary = "ROLE-ADMIN Lấy tất cả đơn hàng với pagination và filter")
+    public ResponseEntity<ApiResponse<OrderPageResponse>> getAllOrders(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDir,
+            @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false) String orderType) {
+
+        String scope = jwt.getClaimAsString("scope");
+        if (scope == null || !scope.equals("ROLE_ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.<OrderPageResponse>builder()
+                            .code(403)
+                            .message("Không có quyền truy cập")
+                            .build());
+        }
+
+        Sort sort = sortDir.equalsIgnoreCase("ASC") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<OrderSummaryResponse> orderPage = orderService.getAllOrders(pageable, status, orderType);
+
+        OrderPageResponse response = new OrderPageResponse(
+                orderPage.getContent(),
+                orderPage.getNumber(),
+                orderPage.getSize(),
+                orderPage.getTotalElements(),
+                orderPage.getTotalPages(),
+                orderPage.isFirst(),
+                orderPage.isLast()
+        );
+
+        return ResponseEntity.ok(
+                ApiResponse.<OrderPageResponse>builder()
+                        .message("Lấy danh sách đơn hàng thành công")
+                        .data(response)
+                        .build()
+        );
+    }
+
+    /**
+     * Admin: Cập nhật trạng thái đơn hàng từ PAID sang SHIPPED
+     */
+    @PutMapping("/{orderId}/status")
+    @Operation(summary = "ROLE-ADMIN Cập nhật trạng thái đơn hàng (PAID -> SHIPPED)")
+    public ResponseEntity<ApiResponse<OrderStatusUpdateResponse>> updateOrderStatus(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long orderId,
+            @RequestBody OrderStatusUpdateRequest request) {
+
+        // Kiểm tra quyền ADMIN
+        String scope = jwt.getClaimAsString("scope");
+        if (scope == null || !scope.equals("ROLE_ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.<OrderStatusUpdateResponse>builder()
+                            .code(403)
+                            .message("Không có quyền truy cập")
+                            .build());
+        }
+
+        OrderStatusUpdateResponse response = orderService.updateOrderStatusByAdmin(orderId, request);
+
+        return ResponseEntity.ok(
+                ApiResponse.<OrderStatusUpdateResponse>builder()
+                        .message(response.getMessage())
+                        .data(response)
+                        .build()
+        );
+    }
+
+    /**
+     * User: Xác nhận đã nhận hàng (SHIPPED -> COMPLETED)
+     */
+    @PutMapping("/{orderId}/confirm-received")
+    @Operation(summary = "Xác nhận đã nhận hàng (SHIPPED -> COMPLETED)")
+    public ResponseEntity<ApiResponse<OrderStatusUpdateResponse>> confirmReceived(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long orderId) {
+
+        Long userId = Long.valueOf(jwt.getClaimAsString("sub"));
+        OrderStatusUpdateResponse response = orderService.updateOrderStatusByUser(orderId, userId);
+
+        return ResponseEntity.ok(
+                ApiResponse.<OrderStatusUpdateResponse>builder()
+                        .message(response.getMessage())
+                        .data(response)
                         .build()
         );
     }

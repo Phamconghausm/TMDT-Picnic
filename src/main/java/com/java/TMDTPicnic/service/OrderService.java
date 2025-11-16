@@ -2,7 +2,9 @@ package com.java.TMDTPicnic.service;
 
 import com.java.TMDTPicnic.dto.request.ApplyCouponRequest;
 import com.java.TMDTPicnic.dto.request.CheckoutRequest;
+import com.java.TMDTPicnic.dto.request.OrderStatusUpdateRequest;
 import com.java.TMDTPicnic.dto.response.OrderHistoryResponse;
+import com.java.TMDTPicnic.dto.response.OrderStatusUpdateResponse;
 import com.java.TMDTPicnic.dto.response.OrderSummaryResponse;
 import com.java.TMDTPicnic.entity.*;
 import com.java.TMDTPicnic.enums.OrderStatus;
@@ -20,6 +22,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,7 +124,7 @@ public class OrderService {
             cartItemRepository.deleteAll(cartItems);
 
             if (request.getPaymentMethod() == PaymentMethod.COD) {
-                order.setStatus(OrderStatus.COMPLETED);
+                order.setStatus(OrderStatus.PAID);
                 orderRepository.save(order);
 
                 payment.setStatus(PaymentStatus.SUCCESS);
@@ -194,7 +199,7 @@ public class OrderService {
             paymentRepository.save(payment);
 
             if (request.getPaymentMethod() == PaymentMethod.COD) {
-                order.setStatus(OrderStatus.COMPLETED);
+                order.setStatus(OrderStatus.PAID);
                 orderRepository.save(order);
 
                 payment.setStatus(PaymentStatus.SUCCESS);
@@ -221,7 +226,7 @@ public class OrderService {
         Payment payment = paymentRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new RuntimeException("Payment not found for order id: " + orderId));
 
-        order.setStatus(OrderStatus.COMPLETED);
+        order.setStatus(OrderStatus.PAID);
         orderRepository.save(order);
 
         payment.setStatus(PaymentStatus.SUCCESS);
@@ -351,6 +356,109 @@ public class OrderService {
         logger.info("=== [OrderHistory] Hoàn tất xử lý SharedCart cho userId = {} ===", userId);
         return OrderHistoryResponse.builder()
                 .orders(orderSummaries)
+                .build();
+    }
+
+    /**
+     * Lấy tất cả đơn hàng cho admin (với pagination và filter)
+     */
+    public Page<OrderSummaryResponse> getAllOrders(Pageable pageable, OrderStatus status, String orderType) {
+        Specification<Order> spec = Specification.where(null);
+
+        if (status != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
+        }
+
+        if (orderType != null && !orderType.isEmpty()) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("orderType"), orderType));
+        }
+
+        Page<Order> orders = orderRepository.findAll(spec, pageable);
+
+        return orders.map(order -> {
+            // Lấy OrderItem đầu tiên để lấy thumbnail
+            List<OrderItem> orderItems = orderItemRepository.findByOrderWithProductAndImages(order);
+            String firstProductThumbnail = null;
+            if (!orderItems.isEmpty() && orderItems.get(0).getProduct() != null) {
+                Product product = orderItems.get(0).getProduct();
+                firstProductThumbnail = product.getThumbnail();
+            }
+
+            return OrderSummaryResponse.builder()
+                    .id(order.getId())
+                    .totalAmount(order.getTotalAmount())
+                    .status(order.getStatus())
+                    .orderType(order.getOrderType() != null ? order.getOrderType() : "SINGLE")
+                    .firstProductThumbnail(firstProductThumbnail)
+                    .createdAt(order.getCreatedAt())
+                    .build();
+        });
+    }
+
+    /**
+     * Admin cập nhật trạng thái đơn hàng từ PAID sang SHIPPED
+     */
+    @Transactional
+    public OrderStatusUpdateResponse updateOrderStatusByAdmin(Long orderId, OrderStatusUpdateRequest request) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+
+        OrderStatus oldStatus = order.getStatus();
+        OrderStatus newStatus = request.getStatus();
+
+        // Validate: Admin chỉ có thể chuyển từ PAID sang SHIPPED
+        if (oldStatus != OrderStatus.PAID) {
+            throw new RuntimeException("Chỉ có thể cập nhật đơn hàng có trạng thái PAID. Trạng thái hiện tại: " + oldStatus);
+        }
+
+        if (newStatus != OrderStatus.SHIPPED) {
+            throw new RuntimeException("Admin chỉ có thể chuyển trạng thái từ PAID sang SHIPPED");
+        }
+
+        order.setStatus(newStatus);
+        orderRepository.save(order);
+
+        logger.info("Admin updated order #{} status from {} to {}", orderId, oldStatus, newStatus);
+
+        return OrderStatusUpdateResponse.builder()
+                .orderId(orderId)
+                .oldStatus(oldStatus.name())
+                .newStatus(newStatus.name())
+                .message("Cập nhật trạng thái đơn hàng thành công")
+                .build();
+    }
+
+    /**
+     * User cập nhật trạng thái đơn hàng từ SHIPPED sang COMPLETED
+     */
+    @Transactional
+    public OrderStatusUpdateResponse updateOrderStatusByUser(Long orderId, Long userId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+
+        // Kiểm tra quyền: User chỉ có thể cập nhật đơn hàng của chính mình
+        if (!order.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Bạn không có quyền cập nhật đơn hàng này");
+        }
+
+        OrderStatus oldStatus = order.getStatus();
+
+        // Validate: User chỉ có thể chuyển từ SHIPPED sang COMPLETED
+        if (oldStatus != OrderStatus.SHIPPED) {
+            throw new RuntimeException("Chỉ có thể xác nhận đơn hàng đã được giao (SHIPPED). Trạng thái hiện tại: " + oldStatus);
+        }
+
+        OrderStatus newStatus = OrderStatus.COMPLETED;
+        order.setStatus(newStatus);
+        orderRepository.save(order);
+
+        logger.info("User {} updated order #{} status from {} to {}", userId, orderId, oldStatus, newStatus);
+
+        return OrderStatusUpdateResponse.builder()
+                .orderId(orderId)
+                .oldStatus(oldStatus.name())
+                .newStatus(newStatus.name())
+                .message("Xác nhận nhận hàng thành công")
                 .build();
     }
 
