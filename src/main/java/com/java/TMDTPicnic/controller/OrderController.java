@@ -2,8 +2,10 @@ package com.java.TMDTPicnic.controller;
 
 import com.java.TMDTPicnic.dto.request.CheckoutRequest;
 import com.java.TMDTPicnic.dto.response.ApiResponse;
+import com.java.TMDTPicnic.dto.response.OrderHistoryResponse;
 import com.java.TMDTPicnic.service.OrderService;
 import com.java.TMDTPicnic.service.VNPayService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -95,6 +97,44 @@ public class OrderController {
 
 
 
+
+    /**
+     * Lấy lịch sử đơn hàng cá nhân của user (SINGLE, GROUP)
+     */
+    @GetMapping("/history/personal")
+    @Operation(summary = "Lấy lịch sử đơn hàng cá nhân của user")
+    public ResponseEntity<ApiResponse<OrderHistoryResponse>> getPersonalOrderHistory(
+            @AuthenticationPrincipal Jwt jwt) {
+        
+        Long userId = Long.valueOf(jwt.getClaimAsString("sub"));
+        OrderHistoryResponse orderHistory = orderService.getPersonalOrderHistory(userId);
+        
+        return ResponseEntity.ok(
+                ApiResponse.<OrderHistoryResponse>builder()
+                        .message("Lấy lịch sử đơn hàng cá nhân thành công")
+                        .data(orderHistory)
+                        .build()
+        );
+    }
+
+    /**
+     * Lấy lịch sử đơn hàng từ shared cart của user
+     */
+    @GetMapping("/history/shared")
+    @Operation(summary = "Lấy lịch sử đơn hàng từ shared cart của user")
+    public ResponseEntity<ApiResponse<OrderHistoryResponse>> getSharedCartOrderHistory(
+            @AuthenticationPrincipal Jwt jwt) {
+        
+        Long userId = Long.valueOf(jwt.getClaimAsString("sub"));
+        OrderHistoryResponse orderHistory = orderService.getSharedCartOrderHistory(userId);
+        
+        return ResponseEntity.ok(
+                ApiResponse.<OrderHistoryResponse>builder()
+                        .message("Lấy lịch sử đơn hàng shared cart thành công")
+                        .data(orderHistory)
+                        .build()
+        );
+    }
 
     /**
      * Lấy IP client hỗ trợ trường hợp qua proxy

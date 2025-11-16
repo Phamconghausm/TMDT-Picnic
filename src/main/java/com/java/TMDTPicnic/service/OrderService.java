@@ -1,6 +1,8 @@
 package com.java.TMDTPicnic.service;
 
 import com.java.TMDTPicnic.dto.request.CheckoutRequest;
+import com.java.TMDTPicnic.dto.response.OrderHistoryResponse;
+import com.java.TMDTPicnic.dto.response.OrderSummaryResponse;
 import com.java.TMDTPicnic.entity.*;
 import com.java.TMDTPicnic.enums.OrderStatus;
 import com.java.TMDTPicnic.enums.PaymentMethod;
@@ -16,6 +18,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,6 +73,7 @@ public class OrderService {
                     .user(user)
                     .totalAmount(total)
                     .status(OrderStatus.PENDING)
+                    .orderType("GROUP")
                     .createdAt(LocalDateTime.now())
                     .build();
             orderRepository.save(order);
@@ -135,6 +139,7 @@ public class OrderService {
                     .user(user)
                     .totalAmount(total)
                     .status(OrderStatus.PENDING)
+                    .orderType("SINGLE")
                     .createdAt(LocalDateTime.now())
                     .build();
             orderRepository.save(order);
@@ -237,4 +242,92 @@ public class OrderService {
 
         logger.info("Updated order #{} status to COMPLETED and payment SUCCESS", orderId);
     }
+
+    public OrderHistoryResponse getPersonalOrderHistory(Long userId) {
+        logger.info("=== [OrderHistory] Bắt đầu lấy lịch sử mua hàng cá nhân cho userId = {} ===", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        logger.info("User tìm thấy: {}", user.getEmail());
+
+        List<Order> orders = orderRepository.findByUserAndOrderTypeIsNotOrderByCreatedAtDesc(user, "SHARED_CART");
+        logger.info("Tổng số order cá nhân tìm thấy: {}", orders.size());
+
+        List<OrderSummaryResponse> orderSummaries = orders.stream()
+                .map(order -> {
+                    logger.info("Xử lý Order ID = {}, orderType = {}", order.getId(), order.getOrderType());
+
+                    List<OrderItem> orderItems = orderItemRepository.findByOrderWithProductAndImages(order);
+                    logger.info(" - Số lượng OrderItem: {}", orderItems.size());
+
+                    String firstProductThumbnail = null;
+                    if (!orderItems.isEmpty() && orderItems.get(0).getProduct() != null) {
+                        Product product = orderItems.get(0).getProduct();
+                        firstProductThumbnail = product.getThumbnail();
+                        logger.info(" - Thumbnail của OrderItem đầu tiên: {}", firstProductThumbnail);
+                    } else {
+                        logger.info(" - KHÔNG tìm thấy product hoặc thumbnail");
+                    }
+
+                    return OrderSummaryResponse.builder()
+                            .id(order.getId())
+                            .totalAmount(order.getTotalAmount())
+                            .status(order.getStatus())
+                            .orderType(order.getOrderType() != null ? order.getOrderType() : "SINGLE")
+                            .firstProductThumbnail(firstProductThumbnail)
+                            .createdAt(order.getCreatedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        logger.info("=== [OrderHistory] Hoàn tất xử lý lịch sử cá nhân cho userId = {} ===", userId);
+        return OrderHistoryResponse.builder()
+                .orders(orderSummaries)
+                .build();
+    }
+
+
+    public OrderHistoryResponse getSharedCartOrderHistory(Long userId) {
+        logger.info("=== [OrderHistory] Bắt đầu lấy lịch sử SharedCart cho userId = {} ===", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        logger.info("User tìm thấy: {}", user.getEmail());
+
+        List<Order> orders = orderRepository.findByUserAndOrderTypeIsOrderByCreatedAtDesc(user, "SHARED_CART");
+        logger.info("Tổng số order SharedCart tìm thấy: {}", orders.size());
+
+        List<OrderSummaryResponse> orderSummaries = orders.stream()
+                .map(order -> {
+                    logger.info("Xử lý SharedCart Order ID = {}, orderType = {}", order.getId(), order.getOrderType());
+
+                    List<OrderItem> orderItems = orderItemRepository.findByOrderWithProductAndImages(order);
+                    logger.info(" - Số lượng OrderItem: {}", orderItems.size());
+
+                    String firstProductThumbnail = null;
+                    if (!orderItems.isEmpty() && orderItems.get(0).getProduct() != null) {
+                        Product product = orderItems.get(0).getProduct();
+                        firstProductThumbnail = product.getThumbnail();
+                        logger.info(" - Thumbnail orderItem đầu tiên: {}", firstProductThumbnail);
+                    } else {
+                        logger.info(" - KHÔNG có product hoặc thumbnail");
+                    }
+
+                    return OrderSummaryResponse.builder()
+                            .id(order.getId())
+                            .totalAmount(order.getTotalAmount())
+                            .status(order.getStatus())
+                            .orderType(order.getOrderType() != null ? order.getOrderType() : "SHARED_CART")
+                            .firstProductThumbnail(firstProductThumbnail)
+                            .createdAt(order.getCreatedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        logger.info("=== [OrderHistory] Hoàn tất xử lý SharedCart cho userId = {} ===", userId);
+        return OrderHistoryResponse.builder()
+                .orders(orderSummaries)
+                .build();
+    }
+
 }

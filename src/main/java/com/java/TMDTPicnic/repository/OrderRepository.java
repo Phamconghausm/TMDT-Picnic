@@ -3,6 +3,7 @@ package com.java.TMDTPicnic.repository;
 import com.java.TMDTPicnic.dto.response.*;
 import com.java.TMDTPicnic.entity.Order;
 import com.java.TMDTPicnic.entity.SharedCart;
+import com.java.TMDTPicnic.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +14,11 @@ import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findBySharedCartAndOrderType(SharedCart sharedCart, String orderType);
+    
+    // ===== ORDER HISTORY =====
+    List<Order> findByUserOrderByCreatedAtDesc(User user);
+    List<Order> findByUserAndOrderTypeIsOrderByCreatedAtDesc(User user, String orderType);
+    List<Order> findByUserAndOrderTypeIsNotOrderByCreatedAtDesc(User user, String orderType);
     // ===== SUMMARY =====
     //COALESCE(a, b, c) if(a=null) return b, b=null return c
     @Query("SELECT COALESCE(SUM(order.totalAmount), 0) FROM Order order")
