@@ -111,10 +111,10 @@ public class OrderController {
     @Operation(summary = "Lấy lịch sử đơn hàng cá nhân của user")
     public ResponseEntity<ApiResponse<OrderHistoryResponse>> getPersonalOrderHistory(
             @AuthenticationPrincipal Jwt jwt) {
-        
+
         Long userId = Long.valueOf(jwt.getClaimAsString("sub"));
         OrderHistoryResponse orderHistory = orderService.getPersonalOrderHistory(userId);
-        
+
         return ResponseEntity.ok(
                 ApiResponse.<OrderHistoryResponse>builder()
                         .message("Lấy lịch sử đơn hàng cá nhân thành công")
@@ -130,10 +130,10 @@ public class OrderController {
     @Operation(summary = "Lấy lịch sử đơn hàng từ shared cart của user")
     public ResponseEntity<ApiResponse<OrderHistoryResponse>> getSharedCartOrderHistory(
             @AuthenticationPrincipal Jwt jwt) {
-        
+
         Long userId = Long.valueOf(jwt.getClaimAsString("sub"));
         OrderHistoryResponse orderHistory = orderService.getSharedCartOrderHistory(userId);
-        
+
         return ResponseEntity.ok(
                 ApiResponse.<OrderHistoryResponse>builder()
                         .message("Lấy lịch sử đơn hàng shared cart thành công")
