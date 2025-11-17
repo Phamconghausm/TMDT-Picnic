@@ -23,7 +23,7 @@ public class CouponService {
     /**
      * Admin tạo mã giảm giá mới
      */
-    public CouponCreateResponse createCoupon(CouponCreateRequest request) {
+    public CouponCreateResponse createCoupon(Long userId,CouponCreateRequest request) {
         Coupon coupon = new Coupon();
         coupon.setCode(request.getCode());
         coupon.setDescription(request.getDescription());
