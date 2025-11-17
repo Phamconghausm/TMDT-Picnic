@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -49,6 +48,19 @@ public class DashboardService {
                 .collect(Collectors.toList());
         response.setRevenueByDay(revenueByDay);
 
+        // Revenue by Week - convert from native query result
+        List<Object[]> revenueByWeekRaw = orderRepository.getRevenueByWeekRaw();
+        List<RevenueByWeekResponse> revenueByWeek = revenueByWeekRaw.stream()
+                .map(row -> {
+                    String week = row[0] != null ? row[0].toString() : "";
+                    BigDecimal revenue = row[1] != null ?
+                            (row[1] instanceof BigDecimal ? (BigDecimal) row[1] :
+                                    new BigDecimal(row[1].toString())) : BigDecimal.ZERO;
+                    return new RevenueByWeekResponse(week, revenue);
+                })
+                .collect(Collectors.toList());
+        response.setRevenueByWeek(revenueByWeek);
+
         // Revenue by Month - convert from native query result
         List<Object[]> revenueByMonthRaw = orderRepository.getRevenueByMonthRaw();
         List<RevenueByMonthResponse> revenueByMonth = revenueByMonthRaw.stream()
@@ -76,6 +88,19 @@ public class DashboardService {
                 })
                 .collect(Collectors.toList());
         response.setOrdersByDay(ordersByDay);
+
+        // Orders by Week - convert from native query result
+        List<Object[]> ordersByWeekRaw = orderRepository.getOrdersByWeekRaw();
+        List<OrdersByWeekResponse> ordersByWeek = ordersByWeekRaw.stream()
+                .map(row -> {
+                    String week = row[0] != null ? row[0].toString() : "";
+                    Long orders = row[1] != null ?
+                            (row[1] instanceof Long ? (Long) row[1] :
+                                    Long.valueOf(row[1].toString())) : 0L;
+                    return new OrdersByWeekResponse(week, orders);
+                })
+                .collect(Collectors.toList());
+        response.setOrdersByWeek(ordersByWeek);
 
         // Orders by Month - convert from native query result
         List<Object[]> ordersByMonthRaw = orderRepository.getOrdersByMonthRaw();
@@ -109,13 +134,21 @@ public class DashboardService {
         // Top Categories
         List<TopCategoryResponse> topCategories = productRepository.getTopCategories();
         response.setTopCategories(topCategories);
+        List<TopCategoryResponse> topCategoriesTop3 = topCategories.stream()
+                .limit(3)
+                .collect(Collectors.toList());
+        response.setTopCategoriesTop3(topCategoriesTop3);
 
         // Top Products - limit to top 10
         List<TopProductResponse> topProducts = productRepository.getTopProducts();
+        List<TopProductResponse> topProductsTop3 = topProducts.stream()
+                .limit(3)
+                .collect(Collectors.toList());
         if (topProducts.size() > 10) {
             topProducts = topProducts.subList(0, 10);
         }
         response.setTopProducts(topProducts);
+        response.setTopProductsTop3(topProductsTop3);
 
         // Order Status
         response.setOrderStatus(orderRepository.getOrderStatus());

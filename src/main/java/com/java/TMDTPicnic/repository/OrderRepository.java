@@ -9,9 +9,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,16 +41,34 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     """, nativeQuery = true)
     List<Object[]> getRevenueByDayRaw();
 
+    // ===== REVENUE BY WEEK =====
+    @Query(value = """
+    SELECT 
+        CONCAT(YEAR(created_at), '-W', LPAD(WEEK(created_at, 3), 2, '0')) AS week,
+        COALESCE(SUM(total_amount), 0) AS revenue
+    FROM orders
+    GROUP BY 
+        CONCAT(YEAR(created_at), '-W', LPAD(WEEK(created_at, 3), 2, '0'))
+    ORDER BY 
+        MIN(created_at)
+""", nativeQuery = true)
+    List<Object[]> getRevenueByWeekRaw();
+
+
+    // ===== REVENUE BY MONTH =====
     // ===== REVENUE BY MONTH =====
     @Query(value = """
-        SELECT 
-            STR_TO_DATE(CONCAT(YEAR(created_at), '-', LPAD(MONTH(created_at), 2, '0'), '-01'), '%Y-%m-%d') as month,
-            COALESCE(SUM(total_amount), 0) as revenue
-        FROM orders
-        GROUP BY month
-        ORDER BY month
-        """, nativeQuery = true)
+    SELECT 
+        STR_TO_DATE(CONCAT(YEAR(created_at), '-', LPAD(MONTH(created_at), 2, '0'), '-01'), '%Y-%m-%d') AS month,
+        COALESCE(SUM(total_amount), 0) AS revenue
+    FROM orders
+    GROUP BY 
+        STR_TO_DATE(CONCAT(YEAR(created_at), '-', LPAD(MONTH(created_at), 2, '0'), '-01'), '%Y-%m-%d')
+    ORDER BY 
+        MIN(created_at)
+""", nativeQuery = true)
     List<Object[]> getRevenueByMonthRaw();
+
 
 
     // ===== ORDERS BY DAY =====
@@ -66,6 +81,17 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         ORDER BY DATE(created_at)
     """, nativeQuery = true)
     List<Object[]> getOrdersByDayRaw();
+
+    // ===== ORDERS BY WEEK =====
+    @Query(value = """
+        SELECT 
+            CONCAT(YEAR(created_at), '-W', LPAD(WEEK(created_at, 3), 2, '0')) as week,
+            COUNT(*) as orders
+        FROM orders
+        GROUP BY CONCAT(YEAR(created_at), '-W', LPAD(WEEK(created_at, 3), 2, '0'))
+        ORDER BY MIN(created_at)
+    """, nativeQuery = true)
+    List<Object[]> getOrdersByWeekRaw();
 
     // ===== ORDERS BY MONTH =====
     @Query(value = """
