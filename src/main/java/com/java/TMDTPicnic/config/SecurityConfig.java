@@ -39,7 +39,8 @@ public class SecurityConfig {
             "/api/addresses",
             "/api/group-buy",
             "/api/orders/vnpay-return",
-            "/api/coupons"
+            "/api/coupons",
+
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {

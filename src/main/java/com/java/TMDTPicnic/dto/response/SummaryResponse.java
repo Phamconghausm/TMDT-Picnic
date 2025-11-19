@@ -2,11 +2,13 @@ package com.java.TMDTPicnic.dto.response;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 public class SummaryResponse {
-    private Double totalRevenue;
+    private BigDecimal totalRevenue;
     private Long totalOrders;
-    private Long ordersCompleted;
+    private OrderStatusResponse ordersCompleted;
     private Long totalProducts;
     private Long productsSold;
 //    private Double totalProfit;

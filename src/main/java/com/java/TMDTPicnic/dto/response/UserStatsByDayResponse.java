@@ -10,5 +10,4 @@ import java.util.Date;
 public class UserStatsByDayResponse {
     private Date date;
     private Long newUsers;
-    private Long returningUsers;
 }

@@ -1,15 +1,19 @@
 package com.java.TMDTPicnic.service;
 
+import com.java.TMDTPicnic.dto.request.DashboardRequest;
 import com.java.TMDTPicnic.dto.response.*;
 import com.java.TMDTPicnic.repository.OrderRepository;
 import com.java.TMDTPicnic.repository.ProductRepository;
 import com.java.TMDTPicnic.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,140 +24,236 @@ public class DashboardService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private static final Logger logger = LoggerFactory.getLogger(DashboardService.class);
+    // ==================== DASHBOARD WITH DATE RANGE ====================
+    public DashboardResponse getDashboard(DashboardRequest request) {
+        LocalDate fromDate = request.getFromDate();
+        LocalDate toDate = request.getToDate();
 
-    public DashboardResponse getDashboardData() {
+        logger.info("DashboardService.getDashboard called with fromDate={}, toDate={}", fromDate, toDate);
+
         DashboardResponse response = new DashboardResponse();
 
-        // Summary
-        SummaryResponse summary = new SummaryResponse();
-        summary.setTotalRevenue(orderRepository.totalRevenue());
-        summary.setTotalOrders(orderRepository.totalOrders());
-        summary.setOrdersCompleted(orderRepository.completedOrders());
-        summary.setTotalProducts(productRepository.countTotalProducts());
-        summary.setProductsSold(productRepository.countTotalSold() != null ? productRepository.countTotalSold() : 0L);
-        summary.setTotalUsers(userRepository.countTotalUsers());
-        summary.setNewUsers(userRepository.countUsersCreatedThisMonth());
-        response.setSummary(summary);
+        try {
+            logger.info("Building summary...");
+            response.setSummary(buildSummary(fromDate, toDate));
+            logger.info("Summary built: {}", response.getSummary());
 
-        // Revenue by Day - convert from native query result
-        List<Object[]> revenueByDayRaw = orderRepository.getRevenueByDayRaw();
-        List<RevenueByDayResponse> revenueByDay = revenueByDayRaw.stream()
-                .map(row -> {
-                    Date date = (Date) row[0];
-                    BigDecimal revenue = row[1] != null ?
-                            (row[1] instanceof BigDecimal ? (BigDecimal) row[1] :
-                                    new BigDecimal(row[1].toString())) : BigDecimal.ZERO;
-                    return new RevenueByDayResponse(date, revenue);
-                })
-                .collect(Collectors.toList());
-        response.setRevenueByDay(revenueByDay);
+            logger.info("Loading revenueByDay...");
+            var revDayRaw = orderRepository.getRevenueByDayRawWithDateRange(fromDate, toDate);
+            logger.info("RevenueByDay raw size: {}", revDayRaw.size());
+            response.setRevenueByDay(mapToRevenueByDay(revDayRaw));
 
-        // Revenue by Week - convert from native query result
-        List<Object[]> revenueByWeekRaw = orderRepository.getRevenueByWeekRaw();
-        List<RevenueByWeekResponse> revenueByWeek = revenueByWeekRaw.stream()
-                .map(row -> {
-                    String week = row[0] != null ? row[0].toString() : "";
-                    BigDecimal revenue = row[1] != null ?
-                            (row[1] instanceof BigDecimal ? (BigDecimal) row[1] :
-                                    new BigDecimal(row[1].toString())) : BigDecimal.ZERO;
-                    return new RevenueByWeekResponse(week, revenue);
-                })
-                .collect(Collectors.toList());
-        response.setRevenueByWeek(revenueByWeek);
+            logger.info("Loading revenueByWeek...");
+            var revWeekRaw = orderRepository.getRevenueByWeekRawWithDateRange(fromDate, toDate);
+            logger.info("RevenueByWeek raw size: {}", revWeekRaw.size());
+            response.setRevenueByWeek(mapToRevenueByWeek(revWeekRaw));
 
-        // Revenue by Month - convert from native query result
-        List<Object[]> revenueByMonthRaw = orderRepository.getRevenueByMonthRaw();
-        List<RevenueByMonthResponse> revenueByMonth = revenueByMonthRaw.stream()
-                .map(row -> {
-                    Date month = (Date) row[0];
-                    BigDecimal revenue = row[1] != null ?
-                            (row[1] instanceof BigDecimal ? (BigDecimal) row[1] :
-                                    new BigDecimal(row[1].toString())) : BigDecimal.ZERO;
-                    return new RevenueByMonthResponse(month, revenue);
-                })
-                .collect(Collectors.toList());
-        response.setRevenueByMonth(revenueByMonth);
+            logger.info("Loading revenueByMonth...");
+            var revMonthRaw = orderRepository.getRevenueByMonthRaw();
+            logger.info("RevenueByMonth raw size: {}", revMonthRaw.size());
+            var revMonthMapped = mapToRevenueByMonth(revMonthRaw);
+            logger.info("RevenueByMonth mapped size: {}", revMonthMapped.size());
+            var filteredRevMonth = filterRevenueByMonth(revMonthMapped, fromDate, toDate);
+            logger.info("RevenueByMonth filtered size: {}", filteredRevMonth.size());
+            response.setRevenueByMonth(filteredRevMonth);
 
-        // Orders by Day - convert from native query result
-        List<Object[]> ordersByDayRaw = orderRepository.getOrdersByDayRaw();
-        List<OrdersByDayResponse> ordersByDay = ordersByDayRaw.stream()
-                .map(row -> {
-                    // Convert java.sql.Date to LocalDate
-                    Date sqlDate = (Date) row[0];
-                    LocalDate date = sqlDate.toLocalDate();
-                    Long orders = row[1] != null ?
-                            (row[1] instanceof Long ? (Long) row[1] :
-                                    Long.valueOf(row[1].toString())) : 0L;
-                    return new OrdersByDayResponse(date, orders);
-                })
-                .collect(Collectors.toList());
-        response.setOrdersByDay(ordersByDay);
+            logger.info("Loading ordersByDay...");
+            var ordDayRaw = orderRepository.getOrdersByDayRawWithDateRange(fromDate, toDate);
+            logger.info("OrdersByDay raw size: {}", ordDayRaw.size());
+            response.setOrdersByDay(mapToOrdersByDay(ordDayRaw));
 
-        // Orders by Week - convert from native query result
-        List<Object[]> ordersByWeekRaw = orderRepository.getOrdersByWeekRaw();
-        List<OrdersByWeekResponse> ordersByWeek = ordersByWeekRaw.stream()
-                .map(row -> {
-                    String week = row[0] != null ? row[0].toString() : "";
-                    Long orders = row[1] != null ?
-                            (row[1] instanceof Long ? (Long) row[1] :
-                                    Long.valueOf(row[1].toString())) : 0L;
-                    return new OrdersByWeekResponse(week, orders);
-                })
-                .collect(Collectors.toList());
-        response.setOrdersByWeek(ordersByWeek);
+            logger.info("Loading ordersByWeek...");
+            var ordWeekRaw = orderRepository.getOrdersByWeekRawWithDateRange(fromDate, toDate);
+            logger.info("OrdersByWeek raw size: {}", ordWeekRaw.size());
+            response.setOrdersByWeek(mapToOrdersByWeek(ordWeekRaw));
 
-        // Orders by Month - convert from native query result
-        List<Object[]> ordersByMonthRaw = orderRepository.getOrdersByMonthRaw();
-        List<OrdersByMonthResponse> ordersByMonth = ordersByMonthRaw.stream()
-                .map(row -> {
-                    String month = row[0] != null ? row[0].toString() : "";
-                    Long orders = row[1] != null ?
-                            (row[1] instanceof Long ? (Long) row[1] :
-                                    Long.valueOf(row[1].toString())) : 0L;
-                    return new OrdersByMonthResponse(month, orders);
-                })
-                .collect(Collectors.toList());
-        response.setOrdersByMonth(ordersByMonth);
+            logger.info("Loading ordersByMonth...");
+            var ordMonthRaw = orderRepository.getOrdersByMonthRaw();
+            logger.info("OrdersByMonth raw size: {}", ordMonthRaw.size());
+            response.setOrdersByMonth(mapToOrdersByMonth(ordMonthRaw));
 
-        // User Stats by Day - convert from native query result
-        List<Object[]> userStatsByDayRaw = userRepository.getUserStatsByDayRaw();
-        List<UserStatsByDayResponse> userStatsByDay = userStatsByDayRaw.stream()
-                .map(row -> {
-                    Date date = (Date) row[0];
-                    Long newUsers = row[1] != null ?
-                            (row[1] instanceof Long ? (Long) row[1] :
-                                    Long.valueOf(row[1].toString())) : 0L;
-                    Long returningUsers = row[2] != null ?
-                            (row[2] instanceof Long ? (Long) row[2] :
-                                    Long.valueOf(row[2].toString())) : 0L;
-                    return new UserStatsByDayResponse(date, newUsers, returningUsers);
-                })
-                .collect(Collectors.toList());
-        response.setUserStatsByDay(userStatsByDay);
+            logger.info("Loading userStatsByDay...");
+            var userStatsRaw = userRepository.getUserStatsByDayRawWithDateRange(fromDate, toDate);
+            logger.info("UserStatsByDay raw size: {}", userStatsRaw.size());
+            response.setUserStatsByDay(mapToUserStatsByDay(userStatsRaw));
 
-        // Top Categories
-        List<TopCategoryResponse> topCategories = productRepository.getTopCategories();
-        response.setTopCategories(topCategories);
-        List<TopCategoryResponse> topCategoriesTop3 = topCategories.stream()
-                .limit(3)
-                .collect(Collectors.toList());
-        response.setTopCategoriesTop3(topCategoriesTop3);
+            setTopCategories(response);
+            setTopProducts(response);
 
-        // Top Products - limit to top 10
-        List<TopProductResponse> topProducts = productRepository.getTopProducts();
-        List<TopProductResponse> topProductsTop3 = topProducts.stream()
-                .limit(3)
-                .collect(Collectors.toList());
-        if (topProducts.size() > 10) {
-            topProducts = topProducts.subList(0, 10);
+            response.setOrderStatus(orderRepository.getOrderStatus());
+
+            logger.info("DashboardResponse built successfully");
+            return response;
+        } catch (Exception e) {
+            logger.error("Error building dashboard response", e);
+            throw e;
         }
-        response.setTopProducts(topProducts);
-        response.setTopProductsTop3(topProductsTop3);
+    }
 
-        // Order Status
-        response.setOrderStatus(orderRepository.getOrderStatus());
 
-        return response;
+    // ==================== SUMMARY BUILDER ====================
+    private SummaryResponse buildSummary(LocalDate fromDate, LocalDate toDate) {
+        SummaryResponse summary = new SummaryResponse();
+
+        if (fromDate == null || toDate == null) {
+            summary.setTotalRevenue(orderRepository.totalRevenue());
+            summary.setTotalOrders(orderRepository.totalOrders());
+            summary.setTotalUsers(userRepository.countTotalUsers());
+        } else {
+            summary.setTotalRevenue(
+                    safeBigDecimal(orderRepository.getTotalRevenueWithDateRange(fromDate, toDate)));
+            summary.setTotalOrders(orderRepository.getTotalOrdersWithDateRange(fromDate, toDate));
+            summary.setTotalUsers(userRepository.getTotalUsersWithDateRange(toDate));
+            summary.setNewUsers(userRepository.getNewUsersWithDateRange(fromDate, toDate));
+        }
+
+        summary.setOrdersCompleted(orderRepository.getOrderStatus());
+        summary.setTotalProducts(productRepository.countTotalProducts());
+        summary.setProductsSold(safeLong(productRepository.countTotalSold()));
+
+        return summary;
+    }
+
+    // ==================== TOP ITEMS SETTER ====================
+    private void setTopCategories(DashboardResponse response) {
+        List<TopCategoryResponse> categories = productRepository.getTopCategories();
+        response.setTopCategories(categories);
+        response.setTopCategoriesTop3(categories.stream().limit(3).collect(Collectors.toList()));
+    }
+
+    private void setTopProducts(DashboardResponse response) {
+        List<TopProductResponse> products = productRepository.getTopProducts();
+        response.setTopProducts(products.size() > 10 ? products.subList(0, 10) : products);
+        response.setTopProductsTop3(products.stream().limit(3).collect(Collectors.toList()));
+    }
+
+    // ==================== MAPPERS ====================
+    private List<RevenueByDayResponse> mapToRevenueByDay(List<Object[]> raw) {
+        return raw.stream()
+                .map(row -> new RevenueByDayResponse(
+                        (Date) row[0],
+                        safeBigDecimal(row[1])
+                ))
+                .collect(Collectors.toList());
+    }
+
+    private List<RevenueByWeekResponse> mapToRevenueByWeek(List<Object[]> raw) {
+        return raw.stream()
+                .map(row -> new RevenueByWeekResponse(
+                        row[0] != null ? row[0].toString() : "",
+                        safeBigDecimal(row[1])
+                ))
+                .collect(Collectors.toList());
+    }
+
+    private List<RevenueByMonthResponse> mapToRevenueByMonth(List<Object[]> raw) {
+        return raw.stream()
+                .map(row -> new RevenueByMonthResponse(
+                        (Date) row[0],
+                        safeBigDecimal(row[1])
+                ))
+                .collect(Collectors.toList());
+    }
+
+    private List<RevenueByMonthResponse> filterRevenueByMonth(List<RevenueByMonthResponse> list, LocalDate fromDate, LocalDate toDate) {
+        return list.stream()
+                .filter(r -> {
+                    if (r.getMonth() == null) {
+                        logger.warn("RevenueByMonthResponse with null month found, skipping");
+                        return false;
+                    }
+                    try {
+                        LocalDate monthDate = r.getMonth()
+                                .toInstant()
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDate();
+                        return !monthDate.isBefore(fromDate.withDayOfMonth(1)) && !monthDate.isAfter(toDate);
+                    } catch (Exception e) {
+                        logger.error("Error converting month date in filterRevenueByMonth", e);
+                        return false;
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
+
+    private List<OrdersByDayResponse> mapToOrdersByDay(List<Object[]> raw) {
+        return raw.stream()
+                .map(row -> new OrdersByDayResponse(
+                        ((Date) row[0]).toLocalDate(),
+                        safeLong(row[1])
+                ))
+                .collect(Collectors.toList());
+    }
+
+    private List<OrdersByWeekResponse> mapToOrdersByWeek(List<Object[]> raw) {
+        return raw.stream()
+                .map(row -> new OrdersByWeekResponse(
+                        row[0] != null ? row[0].toString() : "",
+                        safeLong(row[1])
+                ))
+                .collect(Collectors.toList());
+    }
+
+    private List<OrdersByMonthResponse> mapToOrdersByMonth(List<Object[]> raw) {
+        return raw.stream()
+                .map(row -> new OrdersByMonthResponse(
+                        row[0] != null ? row[0].toString() : "",
+                        safeLong(row[1])
+                ))
+                .collect(Collectors.toList());
+    }
+
+    private List<UserStatsByDayResponse> mapToUserStatsByDay(List<Object[]> raw) {
+        return raw.stream()
+                .map(row -> new UserStatsByDayResponse(
+                        (Date) row[0],
+                        safeLong(row[1])
+                ))
+                .collect(Collectors.toList());
+    }
+
+    // ==================== HELPERS ====================
+    private BigDecimal safeBigDecimal(Object val) {
+        if (val == null) return BigDecimal.ZERO;
+        if (val instanceof BigDecimal) return (BigDecimal) val;
+        try {
+            return new BigDecimal(val.toString());
+        } catch (NumberFormatException e) {
+            return BigDecimal.ZERO;
+        }
+    }
+
+    private Long safeLong(Object val) {
+        if (val == null) return 0L;
+        if (val instanceof Long) return (Long) val;
+        try {
+            return Long.valueOf(val.toString());
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
+    }
+
+    // ==================== OTHER CHART API ====================
+    public List<RevenueByDayResponse> getRevenueChart(DashboardRequest request) {
+        return mapToRevenueByDay(orderRepository.getRevenueByDayRawWithDateRange(request.getFromDate(), request.getToDate()));
+    }
+
+    public List<OrdersByDayResponse> getOrdersChart(DashboardRequest request) {
+        return mapToOrdersByDay(orderRepository.getOrdersByDayRawWithDateRange(request.getFromDate(), request.getToDate()));
+    }
+
+    public List<UserStatsByDayResponse> getUsersChart(DashboardRequest request) {
+        return mapToUserStatsByDay(userRepository.getUserStatsByDayRawWithDateRange(request.getFromDate(), request.getToDate()));
+    }
+
+    public List<TopCategoryResponse> getTopCategories() {
+        return productRepository.getTopCategories();
+    }
+
+    public List<TopProductResponse> getTopProducts() {
+        List<TopProductResponse> topProducts = productRepository.getTopProducts();
+        return topProducts.size() > 10 ? topProducts.subList(0, 10) : topProducts;
     }
 }
-

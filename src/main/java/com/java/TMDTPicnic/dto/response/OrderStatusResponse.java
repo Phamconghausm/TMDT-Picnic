@@ -7,4 +7,5 @@ import lombok.Data;
 @AllArgsConstructor
 public class OrderStatusResponse {
     private Long completedOrders;
+    private Long processingOrders;
 }
