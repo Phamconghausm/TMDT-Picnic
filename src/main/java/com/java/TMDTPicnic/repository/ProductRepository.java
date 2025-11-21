@@ -25,23 +25,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByCategoryIdAndDiscountRateGreaterThanOrderByDiscountRateDesc(Long categoryId, BigDecimal discountRate);
     Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
 
-    @Query("SELECT COUNT(p) FROM Product p") long countTotalProducts();
-
-    @Query("""
-           SELECT COUNT(p) 
-           FROM Product p 
-           WHERE MONTH(p.createdAt) = MONTH(CURRENT_DATE)
-             AND YEAR(p.createdAt) = YEAR(CURRENT_DATE)
-           """)
-    long countProductsCreatedThisMonth();
-
-    // Số sản phẩm tạo từ ngày truyền vào
-    @Query("""
-           SELECT COUNT(p)
-           FROM Product p
-           WHERE p.createdAt >= :fromDate
-           """)
-    long countProductsCreatedSince(@Param("fromDate") LocalDateTime fromDate);
 
     @Query("""
         SELECT new com.java.TMDTPicnic.dto.response.TopCategoryResponse(
@@ -65,31 +48,4 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         ORDER BY p.soldQuantity DESC
     """)
     List<TopProductResponse> getTopProducts(Pageable pageable);
-
-    // ===== PRODUCT STATS =====
-    @Query("SELECT COUNT(p) FROM Product p WHERE p.isActive = true")
-    Long countActiveProducts();
-
-    @Query("SELECT COUNT(p) FROM Product p WHERE p.isActive = false")
-    Long countInactiveProducts();
-
-    @Query("SELECT COUNT(p) FROM Product p WHERE p.stockQuantity <= :threshold")
-    Long countLowStockProducts(@Param("threshold") Integer threshold);
-
-    // ===== TOP PRODUCTS IN SHARED CARTS =====
-    @Query(value = """
-        SELECT 
-            p.id,
-            p.name,
-            SUM(sci.quantity) as soldQuantity,
-            SUM(sci.quantity * sci.price) as revenue
-        FROM products p
-        JOIN shared_cart_items sci ON sci.product_id = p.id
-        JOIN shared_carts sc ON sc.id = sci.shared_cart_id
-        WHERE sc.status = 'OPEN'
-        GROUP BY p.id, p.name
-        ORDER BY soldQuantity DESC
-        LIMIT 10
-    """, nativeQuery = true)
-    List<Object[]> getTopProductsInSharedCartsRaw();
 }

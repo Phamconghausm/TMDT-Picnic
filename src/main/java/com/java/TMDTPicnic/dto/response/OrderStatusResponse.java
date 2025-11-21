@@ -5,14 +5,18 @@ import lombok.Data;
 
 @Data
 public class OrderStatusResponse {
+    private Long totalOrders;
     private Long completedOrders;
     private Long pendingOrders;
     private Long paidOrders;
+    private Long completeOrders;
 
 
-    public OrderStatusResponse(Number completedOrders, Number processingOrders, Number paidOrders) {
+    public OrderStatusResponse(Number totalorders, Number completedOrders, Number processingOrders, Number paidOrders, Number completeOrders) {
+        this.totalOrders = totalorders != null ? totalorders.longValue() : 0L;
         this.completedOrders = completedOrders != null ? completedOrders.longValue() : 0L;
         this.pendingOrders = processingOrders != null ? processingOrders.longValue() : 0L;
         this.paidOrders = paidOrders != null ? paidOrders.longValue() : 0L;
+        this.completeOrders = completeOrders != null ? completeOrders.longValue() : 0L;
     }
 }

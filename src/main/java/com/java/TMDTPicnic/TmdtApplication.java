@@ -9,5 +9,4 @@ public class TmdtApplication {
 	public static void main(String[] args) {
 			SpringApplication.run(TmdtApplication.class, args);
 	}
-git a
 }
