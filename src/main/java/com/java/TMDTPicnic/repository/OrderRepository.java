@@ -33,14 +33,18 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT COUNT(o) FROM Order o")
     Long totalOrders();
 
-    @Query("""
-    SELECT new com.java.TMDTPicnic.dto.response.OrderStatusResponse(
-        SUM(CASE WHEN o.status = 'COMPLETED' THEN 1 ELSE 0 END),
-        SUM(CASE WHEN o.status = 'PAID' THEN 1 ELSE 0 END)
-    )
-    FROM Order o
-    """)
-    OrderStatusResponse getOrderStatus();
+    @Query(value = """
+        SELECT 
+            SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) as completedCount,
+            SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) as pendingCount,
+            SUM(CASE WHEN status = 'PAID' THEN 1 ELSE 0 END) as paidCount
+        FROM orders 
+        WHERE DATE(created_at) BETWEEN :fromDate AND :toDate
+    """, nativeQuery = true)
+    OrderStatusResponse getOrderStatusWithDayRange(@Param("fromDate") LocalDate fromDate,
+                                                   @Param("toDate") LocalDate toDate);
+
+
 
 
     // ===== REVENUE BY DAY =====
@@ -159,5 +163,56 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         WHERE DATE(created_at) BETWEEN :fromDate AND :toDate
     """, nativeQuery = true)
     Long getTotalOrdersWithDateRange(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
+
+    // ===== ORDER TYPE DISTRIBUTION =====
+    @Query("""
+        SELECT new com.java.TMDTPicnic.dto.response.OrderTypeDistributionResponse(
+            o.orderType,
+            COUNT(o)
+        )
+        FROM Order o
+        GROUP BY o.orderType
+    """)
+    List<OrderTypeDistributionResponse> getOrderTypeDistribution();
+
+    // ===== ORDER STATUS DISTRIBUTION =====
+    @Query("""
+        SELECT new com.java.TMDTPicnic.dto.response.OrderStatusDistributionResponse(
+            o.status,
+            COUNT(o)
+        )
+        FROM Order o
+        GROUP BY o.status
+    """)
+    List<OrderStatusDistributionResponse> getOrderStatusDistribution();
+
+    // ===== PENDING ORDERS =====
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.status = 'PENDING'")
+    Long countPendingOrders();
+
+    // ===== ACTIVE USERS (users with orders in last 30 days) =====
+    @Query(value = """
+        SELECT COUNT(DISTINCT user_id)
+        FROM orders
+        WHERE DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    """, nativeQuery = true)
+    Long countActiveUsers();
+
+    // ===== REVENUE FROM PAID ORDERS =====
+    @Query("""
+        SELECT COALESCE(SUM(o.totalAmount), 0)
+        FROM Order o
+        WHERE o.status = 'PAID' OR o.status = 'COMPLETED'
+    """)
+    BigDecimal getRevenueFromPaidOrders();
+
+    // ===== OVERDUE ORDERS (PENDING/PAID older than 24 hours) =====
+    @Query(value = """
+        SELECT COUNT(*)
+        FROM orders
+        WHERE status IN ('PENDING', 'PAID')
+          AND created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)
+    """, nativeQuery = true)
+    Long countOverdueOrders();
 
 }

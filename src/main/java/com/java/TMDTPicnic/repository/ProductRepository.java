@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -24,12 +25,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByCategoryIdAndDiscountRateGreaterThanOrderByDiscountRateDesc(Long categoryId, BigDecimal discountRate);
     Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
 
-    // Tổng số sản phẩm
-    @Query("SELECT COUNT(p) FROM Product p")
-    long countTotalProducts();
-
-    @Query("SELECT SUM(p.soldQuantity) FROM Product p")
-    Long countTotalSold();
+    @Query("SELECT COUNT(p) FROM Product p") long countTotalProducts();
 
     @Query("""
            SELECT COUNT(p) 
@@ -56,7 +52,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         GROUP BY p.category.name
         ORDER BY SUM(p.soldQuantity) DESC
     """)
-    List<TopCategoryResponse> getTopCategories();
+    List<TopCategoryResponse> getTopCategories(Pageable top10);
 
     @Query("""
         SELECT new com.java.TMDTPicnic.dto.response.TopProductResponse(
@@ -68,5 +64,32 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         FROM Product p
         ORDER BY p.soldQuantity DESC
     """)
-    List<TopProductResponse> getTopProducts();
+    List<TopProductResponse> getTopProducts(Pageable pageable);
+
+    // ===== PRODUCT STATS =====
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.isActive = true")
+    Long countActiveProducts();
+
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.isActive = false")
+    Long countInactiveProducts();
+
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.stockQuantity <= :threshold")
+    Long countLowStockProducts(@Param("threshold") Integer threshold);
+
+    // ===== TOP PRODUCTS IN SHARED CARTS =====
+    @Query(value = """
+        SELECT 
+            p.id,
+            p.name,
+            SUM(sci.quantity) as soldQuantity,
+            SUM(sci.quantity * sci.price) as revenue
+        FROM products p
+        JOIN shared_cart_items sci ON sci.product_id = p.id
+        JOIN shared_carts sc ON sc.id = sci.shared_cart_id
+        WHERE sc.status = 'OPEN'
+        GROUP BY p.id, p.name
+        ORDER BY soldQuantity DESC
+        LIMIT 10
+    """, nativeQuery = true)
+    List<Object[]> getTopProductsInSharedCartsRaw();
 }

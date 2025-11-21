@@ -103,10 +103,10 @@ public class AuthenticationService {
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new AppException(ErrorCode.INVALID_PASSWORD);
         }
-
+        user.setLastLogin(LocalDateTime.now());
         var token = generateToken(user);
         var refreshToken = generateRefreshToken(user);
-
+        userRepository.save(user);
         return AuthenticationResponse.builder()
                 .authenticated(true)
                 .token(token)
