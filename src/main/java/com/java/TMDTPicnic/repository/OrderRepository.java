@@ -39,7 +39,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) as completedCount,
             SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) as pendingCount,
             SUM(CASE WHEN status = 'PAID' THEN 1 ELSE 0 END) as paidCount,
-            SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) as completeCount
+            SUM(CASE WHEN status = 'SHIPPED' THEN 1 ELSE 0 END) as shippedCount
         FROM orders 
         WHERE DATE(created_at) BETWEEN :fromDate AND :toDate
     """, nativeQuery = true)

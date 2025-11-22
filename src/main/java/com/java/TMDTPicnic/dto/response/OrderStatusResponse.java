@@ -9,14 +9,14 @@ public class OrderStatusResponse {
     private Long completedOrders;
     private Long pendingOrders;
     private Long paidOrders;
-    private Long completeOrders;
+    private Long shippedOrders;
 
 
-    public OrderStatusResponse(Number totalorders, Number completedOrders, Number processingOrders, Number paidOrders, Number completeOrders) {
+    public OrderStatusResponse(Number totalorders, Number completedOrders, Number processingOrders, Number paidOrders, Number shippedOrders) {
         this.totalOrders = totalorders != null ? totalorders.longValue() : 0L;
         this.completedOrders = completedOrders != null ? completedOrders.longValue() : 0L;
         this.pendingOrders = processingOrders != null ? processingOrders.longValue() : 0L;
         this.paidOrders = paidOrders != null ? paidOrders.longValue() : 0L;
-        this.completeOrders = completeOrders != null ? completeOrders.longValue() : 0L;
+        this.shippedOrders = shippedOrders != null ? shippedOrders.longValue() : 0L;
     }
 }

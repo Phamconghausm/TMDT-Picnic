@@ -22,8 +22,8 @@ public class DashboardController {
     private final DashboardService dashboardService;
 
     // ==================== FULL DASHBOARD ====================
-    @PostMapping("/1-Biểu đồ tròn - Order Summary")
-    @Operation(summary = "ROLE-ADMIN Lấy Summary-Dashboard thành công")
+    @PostMapping("/1-bieu-do-tron-Order-Summary")
+    @Operation(summary = "ROLE-ADMIN Lấy Order-Summary-Dashboard thành công")
     public ResponseEntity<ApiResponse<DashboardResponse>> getDashboard(
             @Valid @RequestBody DashboardRequest request,
             @AuthenticationPrincipal Jwt jwt) {
@@ -48,7 +48,7 @@ public class DashboardController {
     }
 
     // ==================== REVENUE ====================
-    @PostMapping("/2-Biểu đồ cột-revenue-chart")
+    @PostMapping("/2-bieu-do-cot-revenue-chart")
     @Operation(summary = "ROLE-ADMIN Lấy biểu đồ doanh thu")
     public ResponseEntity<ApiResponse<List<RevenueByDayResponse>>> getRevenueChart(
             @Valid @RequestBody DashboardRequest request,
@@ -74,7 +74,7 @@ public class DashboardController {
     }
 
     // ==================== ORDERS ====================
-    @PostMapping("/3-Biểu đồ cột-orders-chart")
+    @PostMapping("/3-bieu-do-cot-orders-chart")
     @Operation(summary = "ROLE-ADMIN Lấy biểu đồ đơn hàng")
     public ResponseEntity<ApiResponse<List<OrdersByDayResponse>>> getOrdersChart(
             @Valid @RequestBody DashboardRequest request,
@@ -100,7 +100,7 @@ public class DashboardController {
     }
 
     // ==================== USERS ====================
-    @PostMapping("/4-Biểu đồ cột-users-chart")
+    @PostMapping("/4-bieu-do-cot-users-chart")
     @Operation(summary = "ROLE-ADMIN Lấy biểu đồ người dùng")
     public ResponseEntity<ApiResponse<List<UserStatsByDayResponse>>> getUsersChart(
             @Valid @RequestBody DashboardRequest request,
@@ -126,7 +126,7 @@ public class DashboardController {
     }
 
     // ==================== TOP CATEGORIES ====================
-    @PostMapping("/5-Biểu đồ cột-top-categories")
+    @PostMapping("/5-bieu-do-cot-top-categories")
     @Operation(summary = "ROLE-ADMIN Lấy top danh mục")
     public ResponseEntity<ApiResponse<List<TopCategoryResponse>>> getTopCategories(
             @AuthenticationPrincipal Jwt jwt) {
@@ -151,7 +151,7 @@ public class DashboardController {
     }
 
     // ==================== TOP PRODUCTS ====================
-    @PostMapping("/6-Biểu đồ cột-top-products")
+    @PostMapping("/6--bieu-do-cot-top-products")
     @Operation(summary = "ROLE-ADMIN Lấy top sản phẩm")
     public ResponseEntity<ApiResponse<List<TopProductResponse>>> getTopProducts(
             @AuthenticationPrincipal Jwt jwt) {
